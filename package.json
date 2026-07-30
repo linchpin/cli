@@ -21,8 +21,8 @@
     "commitlint": "commitlint --edit"
   },
   "devDependencies": {
-    "@commitlint/cli": "^20.4.1",
-    "@commitlint/config-conventional": "^20.4.1",
+    "@commitlint/cli": "^21.0.0",
+    "@commitlint/config-conventional": "^21.0.0",
     "husky": "^9.1.7"
   },
   "engines": {
