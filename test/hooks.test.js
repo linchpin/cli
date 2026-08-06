@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 
-const { findHookFile } = require('../src/lib/hooks');
+const { findHookFile } = require('../legacy/lib/hooks');
 
 function makeTempDir() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'linchpin-hooks-'));

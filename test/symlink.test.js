@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 
-const { ensurePluginLink } = require('../src/lib/symlink');
+const { ensurePluginLink } = require('../legacy/lib/symlink');
 
 function makeTempDir() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'linchpin-'));

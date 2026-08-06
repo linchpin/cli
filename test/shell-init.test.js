@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const os = require('node:os');
 
 const { runCli } = require('../test-utils/cli-fixture');
-const { detectShell, posixWrapper, fishWrapper } = require('../src/commands/shell-init');
+const { detectShell, posixWrapper, fishWrapper } = require('../legacy/commands/shell-init');
 
 test('shell-init outputs a shell function via CLI', () => {
   const result = runCli(os.tmpdir(), ['shell-init']);

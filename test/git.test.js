@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { parseWorktreePorcelain } = require('../src/lib/git');
+const { parseWorktreePorcelain } = require('../legacy/lib/git');
 
 test('parseWorktreePorcelain parses branches and detached entries', () => {
   const input = [

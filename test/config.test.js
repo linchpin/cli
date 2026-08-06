@@ -8,7 +8,7 @@ const {
   normalizeConfig,
   writeConfig,
   writeDefaultConfig
-} = require('../src/lib/config');
+} = require('../legacy/lib/config');
 
 test('normalizeConfig accepts object environments', () => {
   const config = normalizeConfig({

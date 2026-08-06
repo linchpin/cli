@@ -3,7 +3,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { execFileSync, spawnSync } = require('node:child_process');
 
-const BIN_PATH = path.resolve(__dirname, '..', 'bin', 'linchpin.js');
+const BIN_PATH = path.resolve(__dirname, '..', 'dist', 'cli.js');
 const CLEAN_ENV = Object.fromEntries(
   Object.entries(process.env).filter(([key]) => !key.startsWith('GIT_'))
 );

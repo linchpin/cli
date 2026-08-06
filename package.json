@@ -7,34 +7,41 @@
   },
   "description": "A library of CLI commands to help manage jumping between worktrees when developing for WordPress using Studio, LocalWP or wp-env and Agentic workers",
   "license": "GPL-2.0-only",
-  "type": "commonjs",
+  "type": "module",
   "bin": {
-    "linchpin": "bin/linchpin.js"
+    "linchpin": "dist/cli.js"
   },
   "files": [
-    "bin",
-    "src"
+    "dist",
+    "skills",
+    "templates",
+    ".claude-plugin"
   ],
   "scripts": {
+    "build": "tsdown",
+    "typecheck": "tsc --noEmit",
+    "pretest": "npm run build",
     "test": "node --test",
+    "prepack": "npm run build",
     "prepare": "husky || true",
     "commitlint": "commitlint --edit"
   },
   "devDependencies": {
     "@commitlint/cli": "^20.4.1",
     "@commitlint/config-conventional": "^20.4.1",
-    "husky": "^9.1.7"
+    "@inquirer/prompts": "^8.2.1",
+    "@types/node": "^22.20.1",
+    "husky": "^9.1.7",
+    "tsdown": "^0.22.14",
+    "typescript": "^7.0.2"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22.12.0"
   },
   "keywords": [
     "git",
     "worktree",
     "wordpress",
     "linchpin"
-  ],
-  "dependencies": {
-    "@inquirer/prompts": "^8.2.1"
-  }
+  ]
 }
