@@ -9,6 +9,7 @@
       <img src="https://img.shields.io/github/license/linchpin/worktree-utils" alt="License" />
       <img src="https://img.shields.io/badge/Node-%3E%3D20-339933?logo=node.js&logoColor=white" alt="Node >= 20" />
       <br />
+      <img src="https://img.shields.io/github/actions/workflow/status/linchpin/worktree-utils/ci.yml?label=CI" alt="CI status" />
       <img src="https://img.shields.io/github/actions/workflow/status/linchpin/worktree-utils/release-please.yml?label=release" alt="Release status" />
       <br />
       <img src="https://img.shields.io/github/last-commit/linchpin/worktree-utils" alt="Last commit" />
@@ -400,8 +401,16 @@ npm install && npm run build
 
 ```bash
 npm install
-npm test
+npm run typecheck   # tsc --noEmit
+npm run build       # tsdown -> dist/
+npm test            # builds first, then node --test
 ```
+
+The CLI is TypeScript and ESM, built with [tsdown](https://tsdown.dev). Every runtime
+dependency lives in `devDependencies` and is bundled into `dist/`, so the published package
+installs with **zero transitive dependencies**. Un-ported CommonJS still lives in `legacy/`,
+which carries its own `package.json` declaring `"type": "commonjs"`; it is being drained into
+`src/` command by command.
 
 Husky enforces Conventional Commits on `commit-msg`:
 
@@ -414,6 +423,22 @@ Example commit format:
 ```text
 feat(LINCHPIN-4850): add release automation
 ```
+
+### Continuous integration
+
+`.github/workflows/ci.yml` runs on every pull request and on pushes to `main`: typecheck,
+build and tests across Node **22.12** (the `engines` floor) and **24**.
+
+It also gates on **agent-readiness** using
+[`cli-agent-lint`](https://github.com/Camil-H/cli-agent-lint), which grades a CLI A–F across
+34 checks covering flow safety, token efficiency, self-description, automation safety and
+predictability.
+
+**Baseline recorded 2026-08-06, before the command-registry rewrite: 77.2%, grade B** — 24
+pass, 8 needing attention. CI fails if the score drops below that floor. The floor is meant
+to rise: the outstanding checks are `--json` output (TE-1), `--no-color` and `--quiet`
+(TE-3/TE-4), shell completions and schema introspection (SD-3/SD-4), usage examples in help
+(SD-6), a `--timeout` flag (PV-1), and documented distinct exit codes (PV-4).
 
 ## Releases
 

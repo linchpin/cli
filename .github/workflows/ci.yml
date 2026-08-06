@@ -1,0 +1,131 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+# A new push to the same ref supersedes the run in flight.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The engines floor and the current release. A break on either is a break.
+        node: ['22.12', '24']
+    env:
+      # The publish job sets this for the same reason: hooks are for humans committing,
+      # not for a checkout that only installs and verifies.
+      HUSKY: 0
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      - name: Test
+        run: npm test
+
+  agent-lint:
+    name: Agent-readiness
+    runs-on: ubuntu-latest
+    needs: test
+    env:
+      HUSKY: 0
+      # Pinned deliberately rather than @latest, so a linter release cannot turn a
+      # green PR red on its own. Bump it as its own change and re-record the baseline.
+      CLI_AGENT_LINT_VERSION: '0.3.5'
+      # Baseline recorded 2026-08-06 against the pre-rewrite surface: 77% (grade B),
+      # 8 checks needing attention. This is a floor, not a target — raise it as the
+      # rewrite lands --json (TE-1), --quiet/--no-color (TE-3/TE-4), completions and
+      # schema (SD-3/SD-4), help examples (SD-6) and exit codes (PV-4).
+      CLI_AGENT_LINT_MIN_SCORE: '77'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Install cli-agent-lint
+        run: |
+          set -euo pipefail
+          url="https://github.com/Camil-H/cli-agent-lint/releases/download/v${CLI_AGENT_LINT_VERSION}/cli-agent-lint_${CLI_AGENT_LINT_VERSION}_linux_amd64.tar.gz"
+          curl -fsSL -o /tmp/cli-agent-lint.tar.gz "$url"
+          tar -xzf /tmp/cli-agent-lint.tar.gz -C /tmp
+          chmod +x /tmp/cli-agent-lint
+          /tmp/cli-agent-lint --version
+
+      - name: Check agent-readiness
+        run: |
+          set -euo pipefail
+          /tmp/cli-agent-lint check ./dist/cli.js -o json > /tmp/report.json 2>/dev/null || true
+          node --input-type=module -e '
+            import { readFileSync } from "node:fs";
+            import { appendFileSync } from "node:fs";
+
+            const report = JSON.parse(readFileSync("/tmp/report.json", "utf8"));
+            const score = report.score.percentage;
+            const grade = report.score.grade;
+            const min = Number(process.env.CLI_AGENT_LINT_MIN_SCORE);
+            const { pass, warn, fail, skip, total } = report.summary;
+
+            const attention = report.checks
+              .filter((c) => c.status !== "pass" && c.status !== "skip")
+              .map((c) => `| ${c.id} | ${c.status} | ${c.name.trim()} |`)
+              .join("\n");
+
+            const summary = [
+              `### Agent-readiness: ${score.toFixed(1)}% (grade ${grade})`,
+              "",
+              `${pass} pass · ${warn} warn · ${fail} fail · ${skip} skip — of ${total}`,
+              `Floor: ${min}%`,
+              "",
+              attention ? "| Check | Status | Name |\n| --- | --- | --- |\n" + attention : "Nothing needs attention.",
+            ].join("\n");
+
+            console.log(summary);
+            if (process.env.GITHUB_STEP_SUMMARY) {
+              appendFileSync(process.env.GITHUB_STEP_SUMMARY, summary + "\n");
+            }
+
+            if (score + 1e-9 < min) {
+              console.error(
+                `\nAgent-readiness regressed: ${score.toFixed(1)}% is below the ${min}% floor.\n` +
+                  "Fix the regression, or raise the floor deliberately if this is an accepted trade."
+              );
+              process.exit(1);
+            }
+          '
