@@ -39,7 +39,6 @@
 			"section": "Changes to Existing Features \uD83D\uDC85"
 		},
 		{ "type": "revert", "section": "Reverts ⏪️" },
-		{ "type": "docs", "section": "Documentation", "hidden": true },
 		{ "type": "build", "section": "Build System ", "hidden": true },
 		{ "type": "ci", "section": "Continuous Integration", "hidden": true }
 	]
