@@ -1,18 +1,18 @@
 <table width="100%">
   <tr>
     <td align="left" width="70%">
-      <strong>Linchpin CLI - Worktree Utils</strong><br />
+      <strong>Linchpin CLI</strong><br />
       Git worktree tooling for WordPress plugin review workflows with Codex, Claude Code, Cursor, Conductor and other agents.
     </td>
     <td align="center" width="30%">
-      <img src="https://badge.fury.io/js/@linchpinagency%2Fworktree-utils.svg" alt="npm version" />
-      <img src="https://img.shields.io/github/license/linchpin/worktree-utils" alt="License" />
-      <img src="https://img.shields.io/badge/Node-%3E%3D20-339933?logo=node.js&logoColor=white" alt="Node >= 20" />
+      <img src="https://badge.fury.io/js/@linchpinagency%2Fcli.svg" alt="npm version" />
+      <img src="https://img.shields.io/github/license/linchpin/cli" alt="License" />
+      <img src="https://img.shields.io/badge/Node-%3E%3D22.12-339933?logo=node.js&logoColor=white" alt="Node >= 22.12" />
       <br />
-      <img src="https://img.shields.io/github/actions/workflow/status/linchpin/worktree-utils/ci.yml?label=CI" alt="CI status" />
-      <img src="https://img.shields.io/github/actions/workflow/status/linchpin/worktree-utils/release-please.yml?label=release" alt="Release status" />
+      <img src="https://img.shields.io/github/actions/workflow/status/linchpin/cli/ci.yml?label=CI" alt="CI status" />
+      <img src="https://img.shields.io/github/actions/workflow/status/linchpin/cli/release-please.yml?label=release" alt="Release status" />
       <br />
-      <img src="https://img.shields.io/github/last-commit/linchpin/worktree-utils" alt="Last commit" />
+      <img src="https://img.shields.io/github/last-commit/linchpin/cli" alt="Last commit" />
       <img src="https://img.shields.io/badge/PRs-welcome-brightgreen" alt="PRs welcome" />
       <img src="https://img.shields.io/badge/WordPress-%2321759B?logo=wordpress&logoColor=white" alt="WordPress" />
     </td>
@@ -80,7 +80,7 @@ If your pain is "I can create worktrees, but switching my WordPress site between
 ## Install
 
 ```bash
-npm install -g @linchpinagency/worktree-utils
+npm install -g @linchpinagency/cli
 ```
 
 For local development in this repository:
@@ -94,7 +94,7 @@ npm link
 ### 1. Prerequisites
 
 - `git` 2.37+ (worktree support).
-- Node.js `20+` and `npm`.
+- Node.js `22.12+` and `npm`.
 - Optional: `fzf` for interactive `linchpin wt cd`.
 - A local WordPress environment (Studio, `wp-env`, or LocalWP).
 - Your plugin repository cloned under `~/Documents/GitHub/<plugin-name>`.
@@ -102,7 +102,7 @@ npm link
 ### 2. Install CLI
 
 ```bash
-npm install -g @linchpinagency/worktree-utils
+npm install -g @linchpinagency/cli
 ```
 
 Confirm install:
@@ -447,6 +447,6 @@ Releases are managed by `release-please` in GitHub Actions:
 - Pushes to `main` run `.github/workflows/release-please.yml`.
 - `release-please` opens/updates a release PR from conventional commits.
 - When the release PR is merged, a GitHub release/tag is created.
-- If a release is created, the workflow publishes `@linchpinagency/worktree-utils` to npm.
+- If a release is created, the workflow publishes `@linchpinagency/cli` to npm.
 
 ![Linchpin an award winning digital agency building immersive, high performing web experiences](https://assets.linchpin.com/github/linchpin-github-repo-banner.jpg)

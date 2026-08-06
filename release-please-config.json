@@ -5,9 +5,8 @@
 	"commit-search-depth": 1,
 	"packages": {
 		".": {
-			"versioning": "always-bump-patch",
 			"bump-minor-pre-major": true,
-			"name": "worktree-utils",
+			"name": "cli",
 			"extra-files": [
 				"README.md",
 				".release-please-manifest.json"

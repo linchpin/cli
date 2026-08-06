@@ -1,3 +1,9 @@
 node_modules/
 .DS_Store
 dist/
+
+# Per-machine agent settings. Both are currently ignored only by machine-local
+# config (a global core.excludesfile / .git/info/exclude), which no teammate
+# inherits — so without these lines a fresh clone offers them up as untracked.
+.claude/settings.local.json
+.conductor/settings.local.toml

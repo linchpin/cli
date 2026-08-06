@@ -1,11 +1,11 @@
 {
-  "name": "@linchpinagency/worktree-utils",
+  "name": "@linchpinagency/cli",
   "version": "1.0.19",
   "repository": {
     "type": "git",
-    "url": "https://github.com/linchpin/worktree-utils"
+    "url": "https://github.com/linchpin/cli"
   },
-  "description": "A library of CLI commands to help manage jumping between worktrees when developing for WordPress using Studio, LocalWP or wp-env and Agentic workers",
+  "description": "Linchpin's command line tool for WordPress and agent workflows — git worktree management, local environment setup, and deterministic verbs agents can call without approval prompts",
   "license": "GPL-2.0-only",
   "type": "module",
   "bin": {
