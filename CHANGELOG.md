@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.0.21](https://github.com/linchpin/worktree-utils/compare/v1.0.20...v1.0.21) (2026-08-07)
+
+
+### Miscellaneous Chores 🧹
+
+* **deps:** update actions/checkout action to v7 ([#44](https://github.com/linchpin/worktree-utils/issues/44)) ([b746e72](https://github.com/linchpin/worktree-utils/commit/b746e72b222e02a1fd3a707480e8105d85fe4ee5))
+* **deps:** update actions/setup-node action to v7 ([#46](https://github.com/linchpin/worktree-utils/issues/46)) ([b870635](https://github.com/linchpin/worktree-utils/commit/b8706356a87d30b824d4da30ec304e604ad47ace))
+* **deps:** update commitlint monorepo to v21 ([#42](https://github.com/linchpin/worktree-utils/issues/42)) ([7366be3](https://github.com/linchpin/worktree-utils/commit/7366be3df997bf91082854042bee048c836211a7))
+
 ## [1.0.20](https://github.com/linchpin/worktree-utils/compare/v1.0.19...v1.0.20) (2026-03-17)
 
 
