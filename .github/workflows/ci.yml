@@ -58,11 +58,14 @@ jobs:
       # Pinned deliberately rather than @latest, so a linter release cannot turn a
       # green PR red on its own. Bump it as its own change and re-record the baseline.
       CLI_AGENT_LINT_VERSION: '0.3.5'
-      # Baseline recorded 2026-08-06 against the pre-rewrite surface: 77% (grade B),
-      # 8 checks needing attention. This is a floor, not a target — raise it as the
-      # rewrite lands --json (TE-1), --quiet/--no-color (TE-3/TE-4), completions and
-      # schema (SD-3/SD-4), help examples (SD-6) and exit codes (PV-4).
-      CLI_AGENT_LINT_MIN_SCORE: '77'
+      # A floor, not a target — raise it whenever the score improves, so a gain
+      # cannot be given back silently.
+      #   77% — 2026-08-06, pre-rewrite surface (LINCHPIN-5365)
+      #   80% — 2026-08-06, command registry (LINCHPIN-5367): help examples,
+      #         actionable errors, and control characters rejected in argv
+      # Still outstanding: --json (TE-1), --no-color/--quiet (TE-3/TE-4),
+      # completions and schema (SD-3/SD-4), exit codes (PV-4), timeout (PV-1).
+      CLI_AGENT_LINT_MIN_SCORE: '80'
     steps:
       - name: Checkout
         uses: actions/checkout@v6

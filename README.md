@@ -434,11 +434,17 @@ It also gates on **agent-readiness** using
 34 checks covering flow safety, token efficiency, self-description, automation safety and
 predictability.
 
-**Baseline recorded 2026-08-06, before the command-registry rewrite: 77.2%, grade B** — 24
-pass, 8 needing attention. CI fails if the score drops below that floor. The floor is meant
-to rise: the outstanding checks are `--json` output (TE-1), `--no-color` and `--quiet`
-(TE-3/TE-4), shell completions and schema introspection (SD-3/SD-4), usage examples in help
-(SD-6), a `--timeout` flag (PV-1), and documented distinct exit codes (PV-4).
+CI fails if the score drops below a recorded floor, and the floor rises whenever the score
+does, so a gain can't be given back silently.
+
+| Recorded | Score | What moved |
+| --- | --- | --- |
+| 2026-08-06 | 77.2% (B) | Baseline, pre-rewrite surface |
+| 2026-08-06 | 80.7% (B) | Command registry — usage examples in help, actionable errors, control characters rejected in argv |
+
+Still outstanding, each scheduled: `--json` output (TE-1), `--no-color` and `--quiet`
+(TE-3/TE-4), shell completions and schema introspection (SD-3/SD-4), documented distinct exit
+codes (PV-4), and a `--timeout` flag (PV-1).
 
 ## Releases
 

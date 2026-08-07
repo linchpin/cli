@@ -2,53 +2,52 @@
 import { realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
+import { CommanderError } from 'commander';
+
+import { COMMANDS } from './cli/commands/index.js';
+import { CommandError, assertNoControlCharacters, buildProgram } from './cli/program.js';
 import { readVersion } from './version.js';
 
-// Transitional imports. These resolve to the un-ported CommonJS in legacy/ and
-// are bundled into dist/ at build time, so the published package ships no
-// dependencies. Each disappears as its command moves onto the registry
-// (LINCHPIN-5367 .. LINCHPIN-5372), and legacy/ is deleted when the last one goes.
-import { runWt } from '../legacy/commands/wt.js';
-import { runShellInit } from '../legacy/commands/shell-init.js';
-
-const HELP = `linchpin
-
-Usage:
-  linchpin wt <command>
-  linchpin shell-init [--shell bash|zsh|fish]
-
-Commands:
-  wt           Manage worktree workflows and WordPress plugin symlink switching
-  shell-init   Output shell wrapper (auto-cd after wt switch)
-`;
-
 /**
- * Top-level dispatch.
+ * Parse argv and run the matching command.
  *
- * Resolves to a process exit code. Commands signal failure by throwing; the
- * entry point below turns that into exit 1. The richer exit-code vocabulary
- * (2 validation, 3 precondition, 4 auth, 5 refused) arrives with the dual-mode
- * contract in LINCHPIN-5368.
+ * Resolves to a process exit code. The command surface comes entirely from the
+ * registry, so this function has no per-command knowledge.
  */
 export async function run(argv: readonly string[]): Promise<number> {
-  const command = argv[0] ?? 'help';
+  // Before anything parses or echoes an argument.
+  assertNoControlCharacters(argv);
 
-  switch (command) {
-    case 'wt':
-      return await runWt(argv.slice(1));
-    case 'shell-init':
-      return await runShellInit(argv.slice(1));
-    case 'help':
-    case '--help':
-    case '-h':
-      process.stdout.write(HELP);
-      return 0;
-    case '--version':
-    case '-v':
-      process.stdout.write(`${readVersion()}\n`);
-      return 0;
-    default:
-      throw new Error(`Unknown command '${command}'. Run 'linchpin --help'.`);
+  const program = buildProgram(COMMANDS, {
+    name: 'linchpin',
+    version: readVersion(),
+    description: "Linchpin's command line tool for WordPress and agent workflows",
+    examples: [
+      'linchpin wt ls                        List worktrees for this repo',
+      'linchpin wt switch feature/checkout   Point the local site at a worktree',
+      'linchpin shell-init >> ~/.zshrc       Install the directory-changing wrapper',
+      'linchpin <command> --help             Help for one command',
+    ],
+  });
+
+  // Commander exits the process itself by default, which makes it untestable
+  // and steals the exit code from the caller.
+  program.exitOverride();
+
+  try {
+    await program.parseAsync([...argv], { from: 'user' });
+    return 0;
+  } catch (error) {
+    // --help and --version are thrown as "errors" once exitOverride is on.
+    if (error instanceof CommanderError) {
+      if (error.code === 'commander.helpDisplayed' || error.code === 'commander.help') return 0;
+      if (error.code === 'commander.version') return 0;
+      // Commander already wrote its own message to stderr. Carry the exit code
+      // but not the text, or the user sees the same error twice.
+      throw new CommandError('', error.exitCode === 0 ? 0 : 2);
+    }
+
+    throw error;
   }
 }
 
@@ -74,11 +73,17 @@ function isEntryPoint(): boolean {
 
 if (isEntryPoint()) {
   try {
-    const code = await run(process.argv.slice(2));
-    process.exitCode = typeof code === 'number' ? code : 0;
+    process.exitCode = await run(process.argv.slice(2));
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    process.stderr.write(`Error: ${message}\n`);
-    process.exitCode = 1;
+    if (error instanceof CommandError) {
+      if (error.exitCode !== 0 && error.message) {
+        process.stderr.write(`Error: ${error.message}\n`);
+      }
+      process.exitCode = error.exitCode;
+    } else {
+      const message = error instanceof Error ? error.message : String(error);
+      process.stderr.write(`Error: ${message}\n`);
+      process.exitCode = 1;
+    }
   }
 }
