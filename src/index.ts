@@ -88,4 +88,20 @@ export {
   type WorktreeEntry,
 } from './core/git.js';
 
+export {
+  CONFIG_FILE_NAME,
+  CONTENT_TYPES,
+  configPathFor,
+  getOrderedAgentRoots,
+  normalizeConfig,
+  readConfig,
+  readConfigIfPresent,
+  requireWordPressConfig,
+  writeConfig,
+  writeDefaultConfig,
+  type ContentType,
+  type LinchpinConfig,
+  type WordPressConfig,
+} from './core/config.js';
+
 export { readVersion } from './version.js';
