@@ -23,4 +23,36 @@ export {
 export { buildOption, deriveFields, type DerivedField } from './cli/schema-to-options.js';
 export { CommandError, buildProgram } from './cli/program.js';
 export { COMMANDS } from './cli/commands/index.js';
+export {
+  EXIT_CODES,
+  EXIT_CODE_DESCRIPTIONS,
+  InternalError,
+  MissingInputError,
+  RefusedError,
+  UserError,
+  exitCodeFor,
+  isUserError,
+  type ExitCode,
+} from './cli/errors.js';
+
+export {
+  canOpenEditor,
+  detectAgentDetails,
+  isAgent,
+  isCI,
+  isInteractive,
+  isNonInteractive,
+  readAgentName,
+  supportsColor,
+} from './cli/interactive.js';
+
+export {
+  ENVELOPE_VERSION,
+  Output,
+  confirmOrFallback,
+  resolveOutputMode,
+  type Envelope,
+  type OutputMode,
+} from './cli/output.js';
+
 export { readVersion } from './version.js';

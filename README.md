@@ -441,10 +441,34 @@ does, so a gain can't be given back silently.
 | --- | --- | --- |
 | 2026-08-06 | 77.2% (B) | Baseline, pre-rewrite surface |
 | 2026-08-06 | 80.7% (B) | Command registry — usage examples in help, actionable errors, control characters rejected in argv |
+| 2026-08-06 | 86.4% (B) | Dual-mode contract — `--json`, `--quiet`, `--no-color`, documented exit codes |
 
-Still outstanding, each scheduled: `--json` output (TE-1), `--no-color` and `--quiet`
-(TE-3/TE-4), shell completions and schema introspection (SD-3/SD-4), documented distinct exit
-codes (PV-4), and a `--timeout` flag (PV-1).
+Still outstanding: shell completions and schema introspection (SD-3/SD-4), env-var auth
+(FS-4, arrives with `linchpin task`), and a `--timeout` flag (PV-1).
+
+One check stays a warning **on purpose**. SD-1 wants errors to be JSON on stderr by default;
+this CLI is human-readable by default and structured only when asked (`--json`), matching
+`gh` and `wrangler`. In `--json` mode stdout carries exactly one envelope and stderr stays
+empty, including on failure.
+
+## Output modes and exit codes
+
+Mode is decided once at startup: an explicit `--json` / `--plain` / `--quiet` flag, then
+`LINCHPIN_OUTPUT`, then whether stdout is a TTY. Warnings always go to stderr so stdout stays
+parseable.
+
+⚠️ **`CI` is unset inside Claude Code while no stream is a TTY.** Anything that gates
+prompting on a CI check alone classifies an agent as interactive and blocks forever. The
+non-TTY check is the safety net.
+
+| Code | Meaning |
+| --- | --- |
+| 0 | Success |
+| 1 | Unexpected error |
+| 2 | Validation or usage error |
+| 3 | Precondition not met |
+| 4 | Authentication required or rejected |
+| 5 | Refused by a safety check |
 
 ## Releases
 

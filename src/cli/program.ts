@@ -6,23 +6,23 @@ import {
   assertAllCommandsClassified,
   type CommandDefinition,
 } from './registry.js';
+import { EXIT_CODE_DESCRIPTIONS, EXIT_CODES, UserError } from './errors.js';
 import { buildOption, deriveFields } from './schema-to-options.js';
 
 /**
- * An error carrying the exit code the process should end with.
+ * A parsing or dispatch failure the caller can fix.
  *
- * The full vocabulary (2 validation, 3 precondition, 4 auth, 5 refused) and the
- * human/JSON rendering belong to the dual-mode contract in LINCHPIN-5368. This
- * is only enough for the registry to report a validation failure as something
- * other than "unexpected".
+ * A thin specialisation of UserError so there is one error hierarchy and one
+ * place that decides how a failure is rendered and what it exits with.
  */
-export class CommandError extends Error {
-  readonly exitCode: number;
-
-  constructor(message: string, exitCode = 1) {
-    super(message);
+export class CommandError extends UserError {
+  constructor(message: string, exitCode: number = EXIT_CODES.unexpected, remedy?: string) {
+    super(message, {
+      exitCode,
+      code: 'command_error',
+      ...(remedy === undefined ? {} : { remedy }),
+    });
     this.name = 'CommandError';
-    this.exitCode = exitCode;
   }
 }
 
@@ -52,7 +52,7 @@ export function assertNoControlCharacters(argv: readonly string[]): void {
     throw new CommandError(
       `Argument ${index + 1} contains a control character: "${visible}". ` +
         'Pass multi-line or binary content by file path instead.',
-      2
+      EXIT_CODES.validation
     );
   }
 }
@@ -74,7 +74,7 @@ function formatValidationError(name: string, error: z.ZodError): CommandError {
     })
     .join('; ');
 
-  return new CommandError(`Invalid arguments for '${name}': ${details}`, 2);
+  return new CommandError(`Invalid arguments for '${name}': ${details}`, EXIT_CODES.validation);
 }
 
 /**
@@ -130,12 +130,31 @@ export function buildProgram(
   program.showSuggestionAfterError(true);
   program.showHelpAfterError("Run 'linchpin --help' to see available commands.");
 
-  if (options.examples?.length) {
-    program.addHelpText(
-      'after',
-      ['', 'Examples:', ...options.examples.map((example) => `  ${example}`), ''].join('\n')
-    );
-  }
+  // Global flags. The names match the de-facto vocabulary (gh, wrangler, vercel)
+  // so an agent recognises them without reading docs.
+  program
+    .option('--json', 'Emit a machine-readable JSON envelope on stdout')
+    .option('--plain', 'Force undecorated human output')
+    .option('--quiet', 'Suppress all non-error output')
+    .option('--no-input', 'Never prompt; fail naming the missing flags instead')
+    .option('--no-color', 'Disable colored output (also honors NO_COLOR)');
+
+  const exitCodeHelp = [
+    'Exit codes:',
+    ...Object.entries(EXIT_CODE_DESCRIPTIONS).map(([code, text]) => `  ${code}  ${text}`),
+  ].join('\n');
+
+  program.addHelpText(
+    'after',
+    [
+      '',
+      ...(options.examples?.length
+        ? ['Examples:', ...options.examples.map((example) => `  ${example}`), '']
+        : []),
+      exitCodeHelp,
+      '',
+    ].join('\n')
+  );
 
   for (const definition of commands) {
     const segments = definition.meta.name.split(/\s+/).filter(Boolean);

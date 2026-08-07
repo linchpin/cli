@@ -63,9 +63,15 @@ jobs:
       #   77% — 2026-08-06, pre-rewrite surface (LINCHPIN-5365)
       #   80% — 2026-08-06, command registry (LINCHPIN-5367): help examples,
       #         actionable errors, and control characters rejected in argv
-      # Still outstanding: --json (TE-1), --no-color/--quiet (TE-3/TE-4),
-      # completions and schema (SD-3/SD-4), exit codes (PV-4), timeout (PV-1).
-      CLI_AGENT_LINT_MIN_SCORE: '80'
+      #   86% — 2026-08-06, dual-mode contract (LINCHPIN-5368): --json,
+      #         --quiet, --no-color, and documented exit codes
+      # Outstanding: completions and schema (SD-3/SD-4, LINCHPIN-5375), env-var
+      # auth (FS-4, arrives with `task` in LINCHPIN-5379), timeout (PV-1, unowned).
+      # SD-1 stays a warning deliberately — it wants JSON on stderr by default,
+      # but this CLI is human-readable by default and structured on request,
+      # matching gh and wrangler. Degrading human output to score a point is not
+      # a trade we are making.
+      CLI_AGENT_LINT_MIN_SCORE: '86'
     steps:
       - name: Checkout
         uses: actions/checkout@v6

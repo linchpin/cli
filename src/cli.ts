@@ -5,8 +5,23 @@ import { fileURLToPath } from 'node:url';
 import { CommanderError } from 'commander';
 
 import { COMMANDS } from './cli/commands/index.js';
+import { EXIT_CODES } from './cli/errors.js';
+import { Output, resolveOutputMode, type OutputMode } from './cli/output.js';
 import { CommandError, assertNoControlCharacters, buildProgram } from './cli/program.js';
 import { readVersion } from './version.js';
+
+/** Read the mode flags before Commander parses, so failures render correctly too. */
+function readModeFlags(argv: readonly string[]): {
+  json: boolean;
+  plain: boolean;
+  quiet: boolean;
+} {
+  return {
+    json: argv.includes('--json'),
+    plain: argv.includes('--plain'),
+    quiet: argv.includes('--quiet'),
+  };
+}
 
 /**
  * Parse argv and run the matching command.
@@ -14,8 +29,10 @@ import { readVersion } from './version.js';
  * Resolves to a process exit code. The command surface comes entirely from the
  * registry, so this function has no per-command knowledge.
  */
-export async function run(argv: readonly string[]): Promise<number> {
-  // Before anything parses or echoes an argument.
+export async function run(
+  argv: readonly string[],
+  options: { mode?: OutputMode } = {}
+): Promise<number> {
   assertNoControlCharacters(argv);
 
   const program = buildProgram(COMMANDS, {
@@ -34,17 +51,36 @@ export async function run(argv: readonly string[]): Promise<number> {
   // and steals the exit code from the caller.
   program.exitOverride();
 
+  // In JSON mode stdout and stderr must both stay machine-readable. Commander
+  // writes its own plain-text usage errors, which would hand an agent
+  // unparseable output at exactly the moment it asked for JSON — so silence it
+  // and let the envelope carry the message instead.
+  const jsonMode = options.mode === 'json';
+  if (jsonMode) {
+    program.configureOutput({ writeErr: () => {}, writeOut: () => {} });
+  }
+
   try {
     await program.parseAsync([...argv], { from: 'user' });
-    return 0;
+    return EXIT_CODES.ok;
   } catch (error) {
     // --help and --version are thrown as "errors" once exitOverride is on.
     if (error instanceof CommanderError) {
-      if (error.code === 'commander.helpDisplayed' || error.code === 'commander.help') return 0;
-      if (error.code === 'commander.version') return 0;
-      // Commander already wrote its own message to stderr. Carry the exit code
-      // but not the text, or the user sees the same error twice.
-      throw new CommandError('', error.exitCode === 0 ? 0 : 2);
+      if (
+        error.code === 'commander.helpDisplayed' ||
+        error.code === 'commander.help' ||
+        error.code === 'commander.version'
+      ) {
+        return EXIT_CODES.ok;
+      }
+
+      // In human mode Commander already wrote its own message, so carry only the
+      // exit code or the user sees the error twice. In JSON mode it was silenced
+      // above, so the message has to travel for the envelope to report it.
+      throw new CommandError(
+        jsonMode ? error.message : '',
+        error.exitCode === 0 ? EXIT_CODES.ok : EXIT_CODES.validation
+      );
     }
 
     throw error;
@@ -72,18 +108,18 @@ function isEntryPoint(): boolean {
 }
 
 if (isEntryPoint()) {
+  const argv = process.argv.slice(2);
+  const output = new Output(resolveOutputMode(readModeFlags(argv)));
+
   try {
-    process.exitCode = await run(process.argv.slice(2));
+    process.exitCode = await run(argv, { mode: output.mode });
   } catch (error) {
-    if (error instanceof CommandError) {
-      if (error.exitCode !== 0 && error.message) {
-        process.stderr.write(`Error: ${error.message}\n`);
-      }
+    // Commander-originated failures arrive with an empty message because it has
+    // already reported them; rendering again would duplicate the output.
+    if (error instanceof CommandError && error.message === '') {
       process.exitCode = error.exitCode;
     } else {
-      const message = error instanceof Error ? error.message : String(error);
-      process.stderr.write(`Error: ${message}\n`);
-      process.exitCode = 1;
+      process.exitCode = output.failure(argv[0] ?? 'linchpin', error);
     }
   }
 }
