@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.0.20](https://github.com/linchpin/worktree-utils/compare/v1.0.19...v1.0.20) (2026-03-17)
+
+
+### Features ✨
+
+* **NO-TASK:** Add ability to set a default agent ([56ed930](https://github.com/linchpin/worktree-utils/commit/56ed930c25dd65278deadde2ef938caeae52de41))
+* **NO-TASK:** Add ability to support multiple agents ([56ed930](https://github.com/linchpin/worktree-utils/commit/56ed930c25dd65278deadde2ef938caeae52de41))
+* **NO-TASK:** Add ability to switch agents ([56ed930](https://github.com/linchpin/worktree-utils/commit/56ed930c25dd65278deadde2ef938caeae52de41))
+
+
+### Miscellaneous Chores 🧹
+
+* **deps:** update commitlint monorepo to v20.5.0 ([#35](https://github.com/linchpin/worktree-utils/issues/35)) ([a6f3920](https://github.com/linchpin/worktree-utils/commit/a6f3920a03bcb51bb61205ebd56d3055eb44c8e8))
+* **deps:** update dependency @inquirer/prompts to v8.3.2 ([#36](https://github.com/linchpin/worktree-utils/issues/36)) ([6104d93](https://github.com/linchpin/worktree-utils/commit/6104d938c722eebff3a7e8cf3d23f00854e382f5))
+
+
+### Changes to Existing Features 💅
+
+* **NO-TASK:** Updated readme with more features ([56ed930](https://github.com/linchpin/worktree-utils/commit/56ed930c25dd65278deadde2ef938caeae52de41))
+
 ## [1.0.19](https://github.com/linchpin/worktree-utils/compare/v1.0.18...v1.0.19) (2026-03-13)
 
 
