@@ -60,18 +60,27 @@ jobs:
       CLI_AGENT_LINT_VERSION: '0.3.5'
       # A floor, not a target — raise it whenever the score improves, so a gain
       # cannot be given back silently.
-      #   77% — 2026-08-06, pre-rewrite surface (LINCHPIN-5365)
-      #   80% — 2026-08-06, command registry (LINCHPIN-5367): help examples,
-      #         actionable errors, and control characters rejected in argv
-      #   86% — 2026-08-06, dual-mode contract (LINCHPIN-5368): --json,
-      #         --quiet, --no-color, and documented exit codes
+      #
+      # ⚠️ Record the number THIS JOB reports, never a local run. SD-5 (skill /
+      # context files) passes locally off an untracked, gitignored .claude/
+      # directory that does not exist in a clean checkout, so a workstation
+      # reads ~1.7 points high. CI is the gate, so CI is the measurement.
+      #
+      #   77% — 2026-08-06, pre-rewrite surface (LINCHPIN-5365, local — inflated)
+      #   80% — 2026-08-06, command registry (LINCHPIN-5367, local — inflated)
+      #   84% — 2026-08-06, dual-mode contract (LINCHPIN-5368): --json, --quiet,
+      #         --no-color, documented exit codes. First CI-measured figure.
+      #
       # Outstanding: completions and schema (SD-3/SD-4, LINCHPIN-5375), env-var
-      # auth (FS-4, arrives with `task` in LINCHPIN-5379), timeout (PV-1, unowned).
+      # auth (FS-4, arrives with `task` in LINCHPIN-5379), skill/context files
+      # (SD-5, arrives with the bundled skills in LINCHPIN-5381), timeout
+      # (PV-1, unowned).
+      #
       # SD-1 stays a warning deliberately — it wants JSON on stderr by default,
       # but this CLI is human-readable by default and structured on request,
       # matching gh and wrangler. Degrading human output to score a point is not
       # a trade we are making.
-      CLI_AGENT_LINT_MIN_SCORE: '86'
+      CLI_AGENT_LINT_MIN_SCORE: '84'
     steps:
       - name: Checkout
         uses: actions/checkout@v6

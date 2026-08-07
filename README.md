@@ -437,14 +437,20 @@ predictability.
 CI fails if the score drops below a recorded floor, and the floor rises whenever the score
 does, so a gain can't be given back silently.
 
-| Recorded | Score | What moved |
-| --- | --- | --- |
-| 2026-08-06 | 77.2% (B) | Baseline, pre-rewrite surface |
-| 2026-08-06 | 80.7% (B) | Command registry — usage examples in help, actionable errors, control characters rejected in argv |
-| 2026-08-06 | 86.4% (B) | Dual-mode contract — `--json`, `--quiet`, `--no-color`, documented exit codes |
+| Recorded | Score | Where | What moved |
+| --- | --- | --- | --- |
+| 2026-08-06 | 77.2% (B) | local | Baseline, pre-rewrite surface |
+| 2026-08-06 | 80.7% (B) | local | Command registry — usage examples in help, actionable errors, control characters rejected in argv |
+| 2026-08-06 | **84.7% (B)** | **CI** | Dual-mode contract — `--json`, `--quiet`, `--no-color`, documented exit codes |
+
+⚠️ **Record the number CI reports, not a local run.** SD-5 (skill / context files) passes on a
+workstation off an untracked, gitignored `.claude/` directory that doesn't exist in a clean
+checkout, so local runs read roughly 1.7 points high. The first two rows above were measured
+locally and are inflated for that reason; CI is the gate, so CI is the measurement.
 
 Still outstanding: shell completions and schema introspection (SD-3/SD-4), env-var auth
-(FS-4, arrives with `linchpin task`), and a `--timeout` flag (PV-1).
+(FS-4, arrives with `linchpin task`), skill/context files (SD-5, arrives with the bundled
+skills), and a `--timeout` flag (PV-1).
 
 One check stays a warning **on purpose**. SD-1 wants errors to be JSON on stderr by default;
 this CLI is human-readable by default and structured only when asked (`--json`), matching
