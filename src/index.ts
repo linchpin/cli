@@ -55,4 +55,37 @@ export {
   type OutputMode,
 } from './cli/output.js';
 
+// core/ — all logic, no console, no prompts, no process.exit.
+export { runCommand, type RunOptions, type RunResult } from './core/exec.js';
+export {
+  AGENT_BASE_PATHS,
+  AGENT_VALUES,
+  collapseHome,
+  dedupePaths,
+  expandHome,
+  getAgentBasePath,
+  getAgentBasePathsFromConfig,
+  getAgentScanRoots,
+  resolveAgentPath,
+  type AgentName,
+} from './core/agents.js';
+export {
+  extractWorktreeId,
+  findGitAnchor,
+  findRepoWithWorktreeId,
+  getBaseWorktreePath,
+  getCurrentTopLevel,
+  hasWorktreeMetadata,
+  inferBaseRepoPath,
+  inferBaseRepoPathFromWorktreeId,
+  listWorktrees,
+  parseWorktreePorcelain,
+  readGitdirPointer,
+  resolveWorktreeRef,
+  safeRealpath,
+  stripWorktreeSuffix,
+  type ResolvedWorktree,
+  type WorktreeEntry,
+} from './core/git.js';
+
 export { readVersion } from './version.js';
