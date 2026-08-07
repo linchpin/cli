@@ -104,4 +104,27 @@ export {
   type WordPressConfig,
 } from './core/config.js';
 
+export {
+  ensurePluginLink,
+  readExistingTarget,
+  resolveTargetConflict,
+  type ConflictOutcome,
+  type ConflictResolution,
+  type EnsureLinkOptions,
+  type LinkResult,
+} from './core/symlink.js';
+
+export {
+  HOOK_OPERATIONS,
+  HOOK_PHASES,
+  HOOK_POINTS,
+  buildHookEnvironment,
+  findHookFile,
+  isHookPoint,
+  runHook,
+  type HookEnvironment,
+  type HookOperation,
+  type HookPhase,
+} from './core/hooks.js';
+
 export { readVersion } from './version.js';
