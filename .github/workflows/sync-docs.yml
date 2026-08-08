@@ -1,7 +1,7 @@
 name: Sync docs to WordPress
 
-# Publishes docs/ to the Linchpin documentation site via DocsPress, under
-# https://docs.linchpin.com/engineering-resources/cli/
+# Publishes docs/ to the Linchpin documentation site via DocsPress, at
+# https://docs.linchpin.com/cli/
 #
 # SAFETY POSTURE — this workflow is intentionally inert on first commit:
 #   * manual trigger only (no push trigger)
@@ -15,27 +15,36 @@ name: Sync docs to WordPress
 #   3. Set status: publish once the content and hierarchy look right.
 #   4. Only then add the push trigger commented out at the bottom.
 #
-# ⚠️ THE PARENT PAGE MUST BE DOCSPRESS-MANAGED, and the step 1 dry run is what
-# tells you whether it is. DocsPress identifies its own pages by an HTML
-# sentinel comment in the page content. A page it did not create has none, and
-# syncPages treats that as a conflict rather than overwriting it:
+# ⚠️ WHY THIS PUBLISHES AT /cli/ RATHER THAN UNDER AN EXISTING SECTION.
+#
+# DocsPress identifies its own pages by an HTML sentinel comment in the page
+# content, and it ALWAYS generates the root page — ensurePlaceholderHierarchy
+# has no opt-out. A page it did not create carries no sentinel, so syncPages
+# refuses it rather than overwriting:
 #
 #     "An unmanaged WordPress page already uses this path."
 #
-# That refusal is the safe behaviour, but it cascades. The skipped root never
-# enters the parent lookup, so every child below it then fails with:
+# That refusal is the safe behaviour, but it cascades: the skipped root never
+# enters the parent lookup, so every descendant then fails with
+# "Parent page is unavailable". A dry run against the hand-authored
+# /engineering-resources/ page produced exactly that — 7 pages, 7 conflicts,
+# nothing written.
 #
-#     "Parent page is unavailable: engineering-resources"
+# There is no mode that attaches to an unmanaged parent. So a shared section
+# either becomes DocsPress-managed, or you own a root of your own. This repo
+# owns /cli/, which leaves /engineering-resources/ untouched.
 #
-# So if /engineering-resources/ was authored by hand rather than created by
-# DocsPress, this sync publishes nothing until that page is adopted — it is not
-# a matter of nesting underneath it. If it was created by DocsPress from another
-# repository, everything below works and nothing here touches its content.
-#
-# Read the conflict count in the step 1 summary before doing anything else.
+# If this is ever moved under a shared parent, that parent must be
+# DocsPress-managed first, and managed-path must then be set to this
+# repository's own branch of the tree so a sync here cannot trash another
+# repository's pages.
 #
 # Both actions are pinned to immutable commit SHAs. Do not replace them with
 # floating tags — this job is exposed to a WordPress token.
+#
+# ⚠️ This repository is PUBLIC and this job holds a WordPress write token.
+# Never add pull_request or pull_request_target triggers: a fork could then
+# reach the token. workflow_dispatch and push-to-main both require write access.
 
 on:
   workflow_dispatch:
@@ -84,18 +93,21 @@ jobs:
 
           docs-dir: docs
 
-          # New shared area for engineering documentation. Any other repository
-          # publishing here must use the SAME root-slug, root-title, status and
-          # create-h1 — every one of them generates this parent page, and only
-          # identical values keep them from rewriting it on each other's runs.
+          # This repository owns the whole /cli/ tree, so the root it generates
+          # is its own rather than one shared with other repositories. That is
+          # what removes the adoption problem described above.
           #
-          # managed-path limits deletion and reconciliation to this repository's
-          # own branch of the tree. It only matches because the Markdown lives
-          # one directory deep, at docs/cli/ — flattening that silently widens
-          # ownership to the whole engineering-resources subtree.
-          root-slug: engineering-resources
-          root-title: Engineering Resources
-          managed-path: engineering-resources/cli
+          # docs/README.md becomes this root page itself — DocsPress treats
+          # README and index as the section page — and its siblings become
+          # children at /cli/<name>/.
+          root-slug: cli
+          root-title: Linchpin CLI
+
+          # Equal to root-slug, which is also the default. Stated explicitly so
+          # that anyone moving this under a shared parent has to change it here
+          # deliberately rather than inherit a default that would scope deletion
+          # to the entire shared subtree.
+          managed-path: cli
 
           # The DocsPress theme renders the page title itself, so do not let the
           # action inject a duplicate H1 block.
