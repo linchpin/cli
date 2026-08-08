@@ -45,7 +45,7 @@ jobs:
           # was proven on the oldest runtime we claim to support. It was left on
           # 20 when the floor was raised in LINCHPIN-5366, which would have
           # published from a runtime the package declares unsupported.
-          node-version: '22.12'
+          node-version: '24.19'
           registry-url: https://registry.npmjs.org
 
       - name: Run tests
