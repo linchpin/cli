@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.2](https://github.com/linchpin/cli/compare/v1.1.1...v1.1.2) (2026-08-08)
+
+
+### Miscellaneous Chores 🧹
+
+* **deps-dev:** bump fast-uri from 3.1.4 to 3.1.5 ([#48](https://github.com/linchpin/cli/issues/48)) ([b48036c](https://github.com/linchpin/cli/commit/b48036c76f05db86ee57c9ea626a781c1823d26a))
+* **deps-dev:** bump js-yaml from 4.1.1 to 4.3.1 ([#51](https://github.com/linchpin/cli/issues/51)) ([f2ea715](https://github.com/linchpin/cli/commit/f2ea715fff1182f4f74494ac498977409114e67b))
+
 ## [1.1.1](https://github.com/linchpin/cli/compare/v1.1.0...v1.1.1) (2026-08-08)
 
 
