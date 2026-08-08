@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.1.1](https://github.com/linchpin/cli/compare/v1.1.0...v1.1.1) (2026-08-08)
+
+
+### Bug Fixes 🐛
+
+* **LINCHPIN-5366:** Install dependencies before the publish job builds ([#55](https://github.com/linchpin/cli/issues/55)) ([27d5c6b](https://github.com/linchpin/cli/commit/27d5c6bbc6442ffb5d47a800eed6c16cc12484c1))
+
+
+### Documentation 📚
+
+* **LINCHPIN-5384:** Publish the CLI docs at their own root rather than a shared one ([#56](https://github.com/linchpin/cli/issues/56)) ([4ef09c6](https://github.com/linchpin/cli/commit/4ef09c6e88315d43c7ab84bbd2ea3e0c338f2fe0))
+
+
+### Miscellaneous Chores 🧹
+
+* **deps:** update dependency node to v24 ([#30](https://github.com/linchpin/cli/issues/30)) ([0405f91](https://github.com/linchpin/cli/commit/0405f91a133dfeddd8900c5e30f1ba98f1df1f3a))
+* **deps:** update googleapis/release-please-action action to v5 ([#39](https://github.com/linchpin/cli/issues/39)) ([5530a65](https://github.com/linchpin/cli/commit/5530a657d8cb93d6a2ed9b0c450210d5f11586f6))
+
 ## [1.1.0](https://github.com/linchpin/worktree-utils/compare/v1.0.20...v1.1.0) (2026-08-08)
 
 
