@@ -1,0 +1,107 @@
+name: Sync docs to WordPress
+
+# Publishes docs/ to the Linchpin documentation site via DocsPress, under
+# https://docs.linchpin.com/engineering-resources/cli/
+#
+# SAFETY POSTURE — this workflow is intentionally inert on first commit:
+#   * manual trigger only (no push trigger)
+#   * dry-run: true      — plans every operation, writes nothing
+#   * status: draft      — created pages are drafts, not public
+#   * delete-mode: trash — removals go to Trash, never hard-deleted
+#
+# Promote it in this order, confirming the Actions summary at each step:
+#   1. Run manually as-is. Review the planned create/update/delete counts.
+#   2. Set dry-run: false. Pages are created as drafts. Review the page tree.
+#   3. Set status: publish once the content and hierarchy look right.
+#   4. Only then add the push trigger commented out at the bottom.
+#
+# Both actions are pinned to immutable commit SHAs. Do not replace them with
+# floating tags — this job is exposed to a WordPress token.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: "Plan only, write nothing"
+        type: boolean
+        default: true
+      status:
+        description: "Status for created or updated pages"
+        type: choice
+        options:
+          - draft
+          - publish
+        default: draft
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docspress-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Sync
+    runs-on: ubuntu-latest
+    steps:
+      # actions/checkout v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      # linchpin/docspress feature/managed-path-scope. This SHA is NOT on main:
+      # managed-path exists only on that branch. Moving to a main-tracking ref
+      # would silently drop the input, and with it the deletion scoping that
+      # keeps this repository from trashing another repository's pages under the
+      # shared engineering-resources parent.
+      - uses: linchpin/docspress@3260df1c7deceb4da867bdba7967be4b807e4025
+        with:
+          mode: publish
+
+          # Self-hosted target. Do not append /wp-json — DocsPress does that.
+          # docs.linchpin.com is a subsite of the Linchpin multisite.
+          wordpress-url: https://docs.linchpin.com
+          wordpress-site: docs.linchpin.com
+          wordpress-access-token: ${{ secrets.WP_ACCESS_TOKEN }}
+
+          docs-dir: docs
+
+          # New shared area for engineering documentation. Any other repository
+          # publishing here must use the SAME root-slug, root-title, status and
+          # create-h1 — every one of them generates this parent page, and only
+          # identical values keep them from rewriting it on each other's runs.
+          #
+          # managed-path limits deletion and reconciliation to this repository's
+          # own branch of the tree. It only matches because the Markdown lives
+          # one directory deep, at docs/cli/ — flattening that silently widens
+          # ownership to the whole engineering-resources subtree.
+          root-slug: engineering-resources
+          root-title: Engineering Resources
+          managed-path: engineering-resources/cli
+
+          # The DocsPress theme renders the page title itself, so do not let the
+          # action inject a duplicate H1 block.
+          create-h1: false
+
+          # Rewrite relative Markdown links to the generated page URLs.
+          rewrite-links: true
+
+          # "Edit this page on GitHub". github-repository defaults to
+          # GITHUB_REPOSITORY, so this keeps working through the repository
+          # rename without an edit here.
+          edit-link: true
+
+          status: ${{ inputs.status || 'draft' }}
+          delete-mode: trash
+          dry-run: ${{ inputs.dry-run == false && 'false' || 'true' }}
+
+# Step 4 — add automatic syncing only after the manual lifecycle above has
+# succeeded and ongoing publication has been approved:
+#
+# on:
+#   push:
+#     branches: [main]
+#     paths:
+#       - "docs/**/*.md"
+#       - "docs/**/*.markdown"
+#       - ".github/workflows/sync-docs.yml"
+#   workflow_dispatch:
