@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.1.0](https://github.com/linchpin/worktree-utils/compare/v1.0.20...v1.1.0) (2026-08-08)
+
+
+### Features ✨
+
+* **LINCHPIN-5367:** Convert to an agent native CLI with a declarative command registry ([#49](https://github.com/linchpin/worktree-utils/issues/49)) ([f14ba5b](https://github.com/linchpin/worktree-utils/commit/f14ba5bb2a50df0c0ce6500e8b2a93e66c17fc1d))
+
+
+### Miscellaneous Chores 🧹
+
+* **deps:** update actions/checkout action to v7 ([#44](https://github.com/linchpin/worktree-utils/issues/44)) ([b746e72](https://github.com/linchpin/worktree-utils/commit/b746e72b222e02a1fd3a707480e8105d85fe4ee5))
+* **deps:** update actions/setup-node action to v7 ([#46](https://github.com/linchpin/worktree-utils/issues/46)) ([b870635](https://github.com/linchpin/worktree-utils/commit/b8706356a87d30b824d4da30ec304e604ad47ace))
+* **deps:** update commitlint monorepo to v21 ([#42](https://github.com/linchpin/worktree-utils/issues/42)) ([7366be3](https://github.com/linchpin/worktree-utils/commit/7366be3df997bf91082854042bee048c836211a7))
+
 ## [1.0.20](https://github.com/linchpin/worktree-utils/compare/v1.0.19...v1.0.20) (2026-03-17)
 
 
