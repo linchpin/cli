@@ -15,6 +15,25 @@ name: Sync docs to WordPress
 #   3. Set status: publish once the content and hierarchy look right.
 #   4. Only then add the push trigger commented out at the bottom.
 #
+# ⚠️ THE PARENT PAGE MUST BE DOCSPRESS-MANAGED, and the step 1 dry run is what
+# tells you whether it is. DocsPress identifies its own pages by an HTML
+# sentinel comment in the page content. A page it did not create has none, and
+# syncPages treats that as a conflict rather than overwriting it:
+#
+#     "An unmanaged WordPress page already uses this path."
+#
+# That refusal is the safe behaviour, but it cascades. The skipped root never
+# enters the parent lookup, so every child below it then fails with:
+#
+#     "Parent page is unavailable: engineering-resources"
+#
+# So if /engineering-resources/ was authored by hand rather than created by
+# DocsPress, this sync publishes nothing until that page is adopted — it is not
+# a matter of nesting underneath it. If it was created by DocsPress from another
+# repository, everything below works and nothing here touches its content.
+#
+# Read the conflict count in the step 1 summary before doing anything else.
+#
 # Both actions are pinned to immutable commit SHAs. Do not replace them with
 # floating tags — this job is exposed to a WordPress token.
 
