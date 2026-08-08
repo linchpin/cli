@@ -2,5 +2,14 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "config:recommended"
+  ],
+  "packageRules": [
+    {
+      "description": "The publish job must run on the engines.node floor rather than the latest Node, so the artifact that ships is proven on the oldest runtime we support. Renovate bumped it to 24.19 once already, leaving the comment above it saying one thing and the value saying another. Newer versions are covered by the CI matrix in ci.yml, which Renovate is still free to update.",
+      "matchManagers": ["github-actions"],
+      "matchDepNames": ["node"],
+      "matchFileNames": [".github/workflows/release-please.yml"],
+      "enabled": false
+    }
   ]
 }
