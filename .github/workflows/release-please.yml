@@ -40,16 +40,27 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
-          # Must satisfy engines.node (>=22.12.0). This job builds, tests and
-          # publishes, so running it on the floor means the artifact that ships
-          # was proven on the oldest runtime we claim to support. It was left on
-          # 20 when the floor was raised in LINCHPIN-5366, which would have
-          # published from a runtime the package declares unsupported.
-          node-version: '24.19'
+          # Pinned to the engines.node floor (>=22.12.0), NOT the latest Node.
+          # This job builds, tests and publishes, so running it on the floor is
+          # what proves the artifact works on the oldest runtime we claim to
+          # support. Renovate is configured not to bump this line — see
+          # renovate.json. Newer versions are covered by the CI matrix.
+          node-version: '22.12'
           registry-url: https://registry.npmjs.org
+
+      # Required before anything runs. `npm test` triggers `pretest -> build`,
+      # and the build needs devDependencies. Without this the job fails with
+      # "tsdown: not found" — which is exactly how v1.1.0 came to be tagged and
+      # released on GitHub while nothing was ever published to npm.
+      - name: Install
+        run: npm ci
+        env:
+          HUSKY: 0
 
       - name: Run tests
         run: npm test
+        env:
+          HUSKY: 0
 
       - name: Publish to npm
         run: npm publish --access public --provenance
