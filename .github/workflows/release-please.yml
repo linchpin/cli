@@ -40,7 +40,12 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: 20
+          # Must satisfy engines.node (>=22.12.0). This job builds, tests and
+          # publishes, so running it on the floor means the artifact that ships
+          # was proven on the oldest runtime we claim to support. It was left on
+          # 20 when the floor was raised in LINCHPIN-5366, which would have
+          # published from a runtime the package declares unsupported.
+          node-version: '22.12'
           registry-url: https://registry.npmjs.org
 
       - name: Run tests
