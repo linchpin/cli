@@ -5,9 +5,8 @@
 	"commit-search-depth": 1,
 	"packages": {
 		".": {
-			"versioning": "always-bump-patch",
 			"bump-minor-pre-major": true,
-			"name": "worktree-utils",
+			"name": "cli",
 			"extra-files": [
 				"README.md",
 				".release-please-manifest.json"
@@ -40,7 +39,6 @@
 			"section": "Changes to Existing Features \uD83D\uDC85"
 		},
 		{ "type": "revert", "section": "Reverts ⏪️" },
-		{ "type": "docs", "section": "Documentation", "hidden": true },
 		{ "type": "build", "section": "Build System ", "hidden": true },
 		{ "type": "ci", "section": "Continuous Integration", "hidden": true }
 	]

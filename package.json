@@ -1,40 +1,54 @@
 {
-  "name": "@linchpinagency/worktree-utils",
+  "name": "@linchpinagency/cli",
   "version": "1.0.20",
   "repository": {
     "type": "git",
-    "url": "https://github.com/linchpin/worktree-utils"
+    "url": "https://github.com/linchpin/cli"
   },
-  "description": "A library of CLI commands to help manage jumping between worktrees when developing for WordPress using Studio, LocalWP or wp-env and Agentic workers",
+  "description": "Linchpin's command line tool for WordPress and agent workflows — git worktree management, local environment setup, and deterministic verbs agents can call without approval prompts",
   "license": "GPL-2.0-only",
-  "type": "commonjs",
+  "type": "module",
   "bin": {
-    "linchpin": "bin/linchpin.js"
+    "linchpin": "dist/cli.js"
   },
   "files": [
-    "bin",
-    "src"
+    "dist",
+    "skills",
+    "templates",
+    ".claude-plugin"
   ],
   "scripts": {
+    "build": "tsdown",
+    "typecheck": "tsc --noEmit",
+    "pretest": "npm run build",
     "test": "node --test",
+    "prepack": "npm run build",
     "prepare": "husky || true",
     "commitlint": "commitlint --edit"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.0.0",
     "@commitlint/config-conventional": "^21.0.0",
-    "husky": "^9.1.7"
+    "@inquirer/prompts": "^8.2.1",
+    "@types/node": "^22.20.1",
+    "@vercel/detect-agent": "^1.2.4",
+    "commander": "^15.0.0",
+    "husky": "^9.1.7",
+    "picocolors": "^1.1.1",
+    "std-env": "^4.2.0",
+    "tinyexec": "^1.3.0",
+    "tsdown": "^0.22.14",
+    "typescript": "^7.0.2",
+    "unrun": "^0.3.1",
+    "zod": "^4.4.3"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22.12.0"
   },
   "keywords": [
     "git",
     "worktree",
     "wordpress",
     "linchpin"
-  ],
-  "dependencies": {
-    "@inquirer/prompts": "^8.2.1"
-  }
+  ]
 }

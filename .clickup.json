@@ -1,0 +1,9 @@
+{
+  "space": { "id": "90140688927", "name": "Linchpin", "customIdPrefix": "LINCHPIN" },
+  "defaultList": {
+    "id": "901418862156",
+    "name": "List",
+    "path": "Linchpin › CLI › List",
+    "use": "All work on the linchpin CLI."
+  }
+}

@@ -1,17 +1,18 @@
 <table width="100%">
   <tr>
     <td align="left" width="70%">
-      <strong>Linchpin CLI - Worktree Utils</strong><br />
+      <strong>Linchpin CLI</strong><br />
       Git worktree tooling for WordPress plugin review workflows with Codex, Claude Code, Cursor, Conductor and other agents.
     </td>
     <td align="center" width="30%">
-      <img src="https://badge.fury.io/js/@linchpinagency%2Fworktree-utils.svg" alt="npm version" />
-      <img src="https://img.shields.io/github/license/linchpin/worktree-utils" alt="License" />
-      <img src="https://img.shields.io/badge/Node-%3E%3D20-339933?logo=node.js&logoColor=white" alt="Node >= 20" />
+      <img src="https://badge.fury.io/js/@linchpinagency%2Fcli.svg" alt="npm version" />
+      <img src="https://img.shields.io/github/license/linchpin/cli" alt="License" />
+      <img src="https://img.shields.io/badge/Node-%3E%3D22.12-339933?logo=node.js&logoColor=white" alt="Node >= 22.12" />
       <br />
-      <img src="https://img.shields.io/github/actions/workflow/status/linchpin/worktree-utils/release-please.yml?label=release" alt="Release status" />
+      <img src="https://img.shields.io/github/actions/workflow/status/linchpin/cli/ci.yml?label=CI" alt="CI status" />
+      <img src="https://img.shields.io/github/actions/workflow/status/linchpin/cli/release-please.yml?label=release" alt="Release status" />
       <br />
-      <img src="https://img.shields.io/github/last-commit/linchpin/worktree-utils" alt="Last commit" />
+      <img src="https://img.shields.io/github/last-commit/linchpin/cli" alt="Last commit" />
       <img src="https://img.shields.io/badge/PRs-welcome-brightgreen" alt="PRs welcome" />
       <img src="https://img.shields.io/badge/WordPress-%2321759B?logo=wordpress&logoColor=white" alt="WordPress" />
     </td>
@@ -79,7 +80,7 @@ If your pain is "I can create worktrees, but switching my WordPress site between
 ## Install
 
 ```bash
-npm install -g @linchpinagency/worktree-utils
+npm install -g @linchpinagency/cli
 ```
 
 For local development in this repository:
@@ -93,7 +94,7 @@ npm link
 ### 1. Prerequisites
 
 - `git` 2.37+ (worktree support).
-- Node.js `20+` and `npm`.
+- Node.js `22.12+` and `npm`.
 - Optional: `fzf` for interactive `linchpin wt cd`.
 - A local WordPress environment (Studio, `wp-env`, or LocalWP).
 - Your plugin repository cloned under `~/Documents/GitHub/<plugin-name>`.
@@ -101,7 +102,7 @@ npm link
 ### 2. Install CLI
 
 ```bash
-npm install -g @linchpinagency/worktree-utils
+npm install -g @linchpinagency/cli
 ```
 
 Confirm install:
@@ -400,8 +401,16 @@ npm install && npm run build
 
 ```bash
 npm install
-npm test
+npm run typecheck   # tsc --noEmit
+npm run build       # tsdown -> dist/
+npm test            # builds first, then node --test
 ```
+
+The CLI is TypeScript and ESM, built with [tsdown](https://tsdown.dev). Every runtime
+dependency lives in `devDependencies` and is bundled into `dist/`, so the published package
+installs with **zero transitive dependencies**. Un-ported CommonJS still lives in `legacy/`,
+which carries its own `package.json` declaring `"type": "commonjs"`; it is being drained into
+`src/` command by command.
 
 Husky enforces Conventional Commits on `commit-msg`:
 
@@ -415,6 +424,58 @@ Example commit format:
 feat(LINCHPIN-4850): add release automation
 ```
 
+### Continuous integration
+
+`.github/workflows/ci.yml` runs on every pull request and on pushes to `main`: typecheck,
+build and tests across Node **22.12** (the `engines` floor) and **24**.
+
+It also gates on **agent-readiness** using
+[`cli-agent-lint`](https://github.com/Camil-H/cli-agent-lint), which grades a CLI A–F across
+34 checks covering flow safety, token efficiency, self-description, automation safety and
+predictability.
+
+CI fails if the score drops below a recorded floor, and the floor rises whenever the score
+does, so a gain can't be given back silently.
+
+| Recorded | Score | Where | What moved |
+| --- | --- | --- | --- |
+| 2026-08-06 | 77.2% (B) | local | Baseline, pre-rewrite surface |
+| 2026-08-06 | 80.7% (B) | local | Command registry — usage examples in help, actionable errors, control characters rejected in argv |
+| 2026-08-06 | **84.7% (B)** | **CI** | Dual-mode contract — `--json`, `--quiet`, `--no-color`, documented exit codes |
+
+⚠️ **Record the number CI reports, not a local run.** SD-5 (skill / context files) passes on a
+workstation off an untracked, gitignored `.claude/` directory that doesn't exist in a clean
+checkout, so local runs read roughly 1.7 points high. The first two rows above were measured
+locally and are inflated for that reason; CI is the gate, so CI is the measurement.
+
+Still outstanding: shell completions and schema introspection (SD-3/SD-4), env-var auth
+(FS-4, arrives with `linchpin task`), skill/context files (SD-5, arrives with the bundled
+skills), and a `--timeout` flag (PV-1).
+
+One check stays a warning **on purpose**. SD-1 wants errors to be JSON on stderr by default;
+this CLI is human-readable by default and structured only when asked (`--json`), matching
+`gh` and `wrangler`. In `--json` mode stdout carries exactly one envelope and stderr stays
+empty, including on failure.
+
+## Output modes and exit codes
+
+Mode is decided once at startup: an explicit `--json` / `--plain` / `--quiet` flag, then
+`LINCHPIN_OUTPUT`, then whether stdout is a TTY. Warnings always go to stderr so stdout stays
+parseable.
+
+⚠️ **`CI` is unset inside Claude Code while no stream is a TTY.** Anything that gates
+prompting on a CI check alone classifies an agent as interactive and blocks forever. The
+non-TTY check is the safety net.
+
+| Code | Meaning |
+| --- | --- |
+| 0 | Success |
+| 1 | Unexpected error |
+| 2 | Validation or usage error |
+| 3 | Precondition not met |
+| 4 | Authentication required or rejected |
+| 5 | Refused by a safety check |
+
 ## Releases
 
 Releases are managed by `release-please` in GitHub Actions:
@@ -422,6 +483,6 @@ Releases are managed by `release-please` in GitHub Actions:
 - Pushes to `main` run `.github/workflows/release-please.yml`.
 - `release-please` opens/updates a release PR from conventional commits.
 - When the release PR is merged, a GitHub release/tag is created.
-- If a release is created, the workflow publishes `@linchpinagency/worktree-utils` to npm.
+- If a release is created, the workflow publishes `@linchpinagency/cli` to npm.
 
 ![Linchpin an award winning digital agency building immersive, high performing web experiences](https://assets.linchpin.com/github/linchpin-github-repo-banner.jpg)
