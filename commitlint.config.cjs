@@ -1,42 +1,16 @@
 /**
- * Custom config for commitlint based on Linchpin needs/conventions.
+ * Commit linting for this project.
  *
- * This config only slightly modifies the default config to allow for "improve" as a type
- * and adds support for ClickUp or Github issue numbers in the commit message.
+ * The rules live in @linchpinagency/commitlint-config so every Linchpin project
+ * lints commits the same way and a convention change ships from one place
+ * instead of drifting per repo.
  *
- * Format Example
+ * Format example
  *
- * feat(LINCHPIN-4850): Add new feature or GitHub issue number or NO-TASK if cowboying it on the fly.
+ *   feat(PROJ-123): Add new feature
+ *
+ * or, with no task, NO-TASK or a GitHub issue number such as #42.
  */
 module.exports = {
-  extends: ["@commitlint/config-conventional"],
-  rules: {
-		'type-enum': [
-			2,
-			'always',
-			[
-				'improve',
-				'build',
-				'chore',
-				'ci',
-				'docs',
-				'feat',
-				'fix',
-				'perf',
-				'refactor',
-				'revert',
-				'style',
-				'test',
-				'update',
-			],
-		],
-		'subject-case': [1, 'always', ['sentence-case']],
-	},
-	parserPreset: {
-		parserOpts: {
-			headerPattern:
-				/^(improve|build|ci|feat|fix|docs|style|revert|perf|refactor|test|chore)\(((?:[A-Z]+-\d+)|(?:NO-TASK)|(?:\#\d+))\):\s?([\w\d\s,\-]*)/,
-			headerCorrespondence: ['type', 'scope', 'subject'],
-		},
-	}
+	extends: [ '@linchpinagency/commitlint-config' ],
 };
