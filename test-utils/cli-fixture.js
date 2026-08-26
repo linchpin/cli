@@ -4,9 +4,18 @@ const path = require('node:path');
 const { execFileSync, spawnSync } = require('node:child_process');
 
 const BIN_PATH = path.resolve(__dirname, '..', 'dist', 'cli.js');
-const CLEAN_ENV = Object.fromEntries(
-  Object.entries(process.env).filter(([key]) => !key.startsWith('GIT_'))
-);
+
+// GIT_* is stripped so a caller's git environment cannot leak into a fixture
+// repo. The update notifier is switched off for a different reason: a suite that
+// reaches the npm registry fails offline, and its stderr notice would show up in
+// tests asserting on stderr. `test/update.test.js` opts back in deliberately.
+const CLEAN_ENV = {
+  ...Object.fromEntries(
+    Object.entries(process.env).filter(([key]) => !key.startsWith('GIT_'))
+  ),
+  LINCHPIN_NO_UPDATE_NOTIFIER: '1',
+  LINCHPIN_CACHE_DIR: path.join(os.tmpdir(), 'linchpin-test-cache')
+};
 
 function makeTempDir() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'linchpin-cli-'));

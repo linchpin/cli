@@ -1,4 +1,4 @@
-import { Command } from 'commander';
+import { Command, Option } from 'commander';
 import { z } from 'zod';
 
 import {
@@ -7,6 +7,8 @@ import {
   type CommandDefinition,
 } from './registry.js';
 import { EXIT_CODE_DESCRIPTIONS, EXIT_CODES, UserError } from './errors.js';
+import { Output } from './output.js';
+import type { Manifest } from '../version.js';
 import { buildOption, deriveFields } from './schema-to-options.js';
 
 /**
@@ -25,6 +27,16 @@ export class CommandError extends UserError {
     this.name = 'CommandError';
   }
 }
+
+/**
+ * Flags the Output layer owns, which every command must still accept.
+ *
+ * They are resolved from the whole argv before Commander parses, so a command
+ * never reads them — but Commander rejects options it has not been told about,
+ * and `linchpin version --json` failing while `linchpin --json version` works is
+ * exactly the kind of positional trap an agent cannot be expected to learn.
+ */
+const MODE_FLAGS = ['--json', '--plain', '--quiet', '--no-input', '--no-color'] as const;
 
 // ASCII control characters. Excluded from argv entirely: multi-line and binary
 // payloads travel by file path in this CLI (--message-file, --body-file), never
@@ -63,6 +75,14 @@ export interface BuildProgramOptions {
   readonly description?: string;
   /** Shown under the root `--help`, so usage is discoverable without docs. */
   readonly examples?: readonly string[];
+  /**
+   * The package identity handed to commands. Defaults to the binary name, which
+   * is only right when the two happen to match — `linchpin version` needs the
+   * *package* name to ask a registry about it.
+   */
+  readonly manifest?: Manifest;
+  /** Renderer handed to every command, so mode is decided once per process. */
+  readonly output?: Output;
 }
 
 /** Turn a Zod failure into one message an agent can act on without parsing a stack. */
@@ -112,6 +132,9 @@ export function buildProgram(
   options: BuildProgramOptions
 ): Command {
   assertAllCommandsClassified(commands);
+
+  const manifest: Manifest = options.manifest ?? { name: options.name, version: options.version };
+  const output = options.output ?? new Output();
 
   const program = new Command(options.name);
   program.version(options.version, '-v, --version', 'Print the version and exit');
@@ -182,6 +205,12 @@ export function buildProgram(
       command.passThroughOptions(true);
     }
 
+    // A passthrough is excluded deliberately: the legacy `wt` dispatcher reads
+    // `--json` out of its own argv, so claiming it here would swallow it.
+    if (!definition.meta.passthrough) {
+      for (const flag of MODE_FLAGS) command.addOption(new Option(flag).hideHelp());
+    }
+
     const fields = deriveFields(definition.args);
 
     for (const field of fields) {
@@ -219,7 +248,11 @@ export function buildProgram(
       const parsed = definition.args.safeParse(raw);
       if (!parsed.success) throw formatValidationError(definition.meta.name, parsed.error);
 
-      const code = await definition.handler(parsed.data, { argv: process.argv.slice(2) });
+      const code = await definition.handler(parsed.data, {
+        argv: process.argv.slice(2),
+        output,
+        manifest,
+      });
       if (typeof code === 'number' && code !== 0) {
         throw new CommandError(`'${definition.meta.name}' exited with code ${code}`, code);
       }

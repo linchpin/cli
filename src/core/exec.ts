@@ -11,6 +11,14 @@ export interface RunOptions {
   readonly allowFailure?: boolean;
   readonly cwd?: string;
   readonly env?: NodeJS.ProcessEnv;
+  /**
+   * Stream the child's output straight to the terminal instead of capturing it.
+   *
+   * For a long-running command whose progress is the point — a package manager
+   * installing an upgrade — silence for thirty seconds reads as a hang. The
+   * returned stdout and stderr are empty in this mode; nothing captured them.
+   */
+  readonly inherit?: boolean;
 }
 
 /**
@@ -32,7 +40,7 @@ export function runCommand(
   args: readonly string[],
   options: RunOptions = {}
 ): RunResult {
-  const { allowFailure = false, cwd, env } = options;
+  const { allowFailure = false, cwd, env, inherit = false } = options;
 
   let exitCode: number;
   let stdout: string;
@@ -44,7 +52,7 @@ export function runCommand(
       nodeOptions: {
         // stdin ignored: nothing here is interactive, and inheriting it would
         // let a subprocess block on a stream nobody is attached to.
-        stdio: ['ignore', 'pipe', 'pipe'],
+        stdio: inherit ? ['ignore', 'inherit', 'inherit'] : ['ignore', 'pipe', 'pipe'],
         ...(cwd === undefined ? {} : { cwd }),
         ...(env === undefined ? {} : { env }),
       },
