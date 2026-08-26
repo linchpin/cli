@@ -2,7 +2,7 @@
   <tr>
     <td align="left" width="70%">
       <strong>Linchpin CLI</strong><br />
-      Git worktree tooling for WordPress plugin review workflows with Codex, Claude Code, Cursor, Conductor and other agents.
+      One command line tool for WordPress and agent workflows — git worktree management, local environment switching, and deterministic verbs agents can call without approval prompts.
     </td>
     <td align="center" width="30%">
       <img src="https://badge.fury.io/js/@linchpinagency%2Fcli.svg" alt="npm version" />
@@ -27,290 +27,351 @@
   </tr>
 </table>
 
-## What is this CLI?
+```bash
+npm install -g @linchpinagency/cli
+linchpin --help
+```
 
-`linchpin wt` is a git worktree helper tuned for WordPress plugin development alongside Agent support to help easily swap Symlinks between your local environment and worktrees created by you or agents.
+**Contents** · [What this is](#what-this-is) · [Command surface](#command-surface) · [Requirements](#requirements) ·
+[Install](#install) · [Set up a project](#set-up-a-project) · [Daily use](#daily-use) ·
+[Staying up to date](#staying-up-to-date) · [Uninstall](#uninstall) · [Configuration](#configuration) ·
+[Hooks](#hooks) · [Agents, output modes and exit codes](#agents-output-modes-and-exit-codes) ·
+[Troubleshooting](#troubleshooting) · [Development](#development) · [Releases](#releases)
 
-It is designed for this setup:
+## What this is
 
-- Plugin repository in `~/Documents/GitHub/<plugin-name>`.
-- Multiple git worktrees created by Codex or other agents.
-- A shared local WordPress environment (Studio, `wp-env`, or LocalWP).
-- A plugin directory in that environment that should point to a specific worktree via symlink.
+`linchpin` is a single binary that carries every repeatable piece of Linchpin's WordPress
+workflow. It is not a wrapper around one thing — commands are declared in a registry that
+generates `--help`, flag parsing, effect classification and (soon) shell completions from one
+definition each, so the surface grows without the tool getting harder to learn.
 
-### Why symlinks? Why isn’t the repo checked out directly in my environment?
+Three properties hold across every command:
 
-Your plugin repo is **not** checked out directly into Studio, LocalWP, or wp-env on purpose. The workflow relies on **symlinks** so you can **swap** which worktree (branch) the environment sees:
+**One local WordPress install, many branches.** A plugin or theme repo can have any number of
+git worktrees, but a local WordPress install has exactly one directory slot for it.
+`linchpin wt switch` repoints that slot's symlink at the worktree you want, so one install
+serves every branch without copying files or re-checking-out.
 
-- The repo lives in its own directory (e.g. `~/Documents/GitHub/my-plugin`) with multiple [git worktrees](https://git-scm.com/docs/git-worktree) (e.g. `main`, `conductor/a`, `feature/b`).
-- The WordPress environment has **one** plugin (or theme) slot (e.g. `~/Studio/mysite/wp-content/plugins/my-plugin`). That slot is a **symlink** pointing at one of the worktree paths.
-- When you run `linchpin wt switch <branch>` (or pick from the list), we repoint that symlink to the chosen worktree. This allows for our local environment to use an already checked out worktree with out any errors. 
+**Built to be driven by an agent.** Every command is classified `read`, `write` or
+`destructive`, takes file paths rather than piped heredocs, emits a JSON envelope on request,
+and uses documented exit codes. Claude Code, Codex, Cursor and Conductor can call it without
+tripping approval prompts that cannot be permanently allowlisted.
 
-So you keep a single WordPress install and switch which worktree it uses by changing the symlink target.
+**It never blocks on a prompt nobody can answer.** Interactivity is decided from whether a TTY
+is attached, not from whether `CI` is set — because inside an agent `CI` is unset and no stream
+is a TTY, which is exactly the combination that makes a naive wizard hang forever.
 
-## Should you use this?
+Deeper background lives in [`docs/`](docs/README.md): [worktrees and the symlink
+swap](docs/worktrees.md), [configuration](docs/configuration.md), [hooks](docs/hooks.md),
+and [agent integration](docs/agent-integration.md).
 
-Use this CLI if you already like `git worktree` but need WordPress-specific environment switching.
+## Command surface
 
-This project does **not** replace git worktrees. It adds a WordPress workflow layer on top of them:
+```bash
+linchpin --help                 # every command, grouped by topic
+linchpin <command> --help       # flags, examples and description for one
+```
 
-- Store plugin/theme target paths per local environment (`Studio`, `LocalWP`, `wp-env`, custom).
-- Repoint one plugin/theme symlink to a different worktree with one command.
-- Add safety checks around symlink replacement and worktree deletion.
-- Keep one local WordPress install while reviewing many branches/worktrees.
+| Command | What it does | Effect |
+| --- | --- | --- |
+| `wt ls` / `wt current` | List worktrees, or report the active one and its symlink | read |
+| `wt switch [ref]` | Repoint the WordPress plugin/theme symlink at a worktree | write |
+| `wt new` / `wt get` / `wt extract` | Create a worktree from a new branch, a remote branch, or the current one | write |
+| `wt mv` / `wt del` / `wt gone` | Rename, remove, or prune worktrees whose remote branch is gone | destructive |
+| `wt cd` / `wt home` | Print a worktree path for `cd "$(…)"` | read |
+| `wt use` | Detach the base worktree onto the current worktree's commit | write |
+| `wt copy <path>` / `wt link <path>` | Copy or symlink a file from the base worktree into this one | write |
+| `wt config init` / `wt config show` | Create or inspect `.linchpin.json` | write / read |
+| `wt invoke <hook>` | Run a lifecycle hook by hand | write |
+| `shell-init` | Emit the shell wrapper that lets `wt switch` change your directory | read |
+| `version` | Print the installed version and whether a newer one is published | read |
+| `update` | Install the latest published version | write |
 
-You probably **do not** need this if:
+The effect column is what each subcommand does to the world — the classification skills use to
+decide what an agent may run without asking. `wt` is still registered as a **single
+`destructive` passthrough** to the legacy dispatcher, because the safe reading of a group
+containing `del` is the most dangerous verb in it; the per-subcommand effects above land as each
+one is ported.
 
-- You only need `git worktree add/list/remove`.
-- You do not use a shared local WordPress environment.
-- You are fine managing symlink paths and switching manually.
+`linchpin repo <task>` — connecting a repository to the release infrastructure in one command —
+is specified but **not yet built**. See [docs/repo-tasks.md](docs/repo-tasks.md).
 
-## `linchpin wt` vs plain `git worktree`
+## Requirements
 
-| Need | Plain `git worktree` | `linchpin wt` |
-|---|---|---|
-| Create/list/remove worktrees | Yes (`git worktree ...`) | Yes (wrapper commands: `new`, `ls`, `del`, `get`) |
-| Switch which branch your WordPress site loads | Manual symlink edits | Built-in: `linchpin wt switch [branch] --env <name>` |
-| Save WordPress environment paths for team use | No | Yes (`linchpin wt config init` + `.linchpin.json`) |
-| Guardrails for WP plugin/theme symlink targets | No | Yes (blocks non-symlink target replacement unless `--force`) |
-| Interactive worktree picker for switching | No | Yes (TTY picker + optional `fzf` for `cd`) |
-
-If your pain is "I can create worktrees, but switching my WordPress site between them is manual and error-prone," this tool is the fit.
+- Node.js **22.12+** and npm (the `engines` floor CI tests against).
+- `git` **2.37+**, for worktree support.
+- A local WordPress environment: [Studio](https://developer.wordpress.com/studio/), `wp-env`,
+  or LocalWP.
+- Your plugin, theme or `wp-content` repository cloned somewhere stable, e.g.
+  `~/Documents/GitHub/<name>`.
+- Optional: [`fzf`](https://github.com/junegunn/fzf), which turns the site and worktree pickers
+  into fuzzy finders.
 
 ## Install
 
-```bash
-npm install -g @linchpinagency/cli
-```
-
-For local development in this repository:
+Install it globally — this is a tool you run against many repositories, not a project
+dependency.
 
 ```bash
-npm link
+npm install -g @linchpinagency/cli      # npm
+pnpm add -g @linchpinagency/cli         # pnpm
+bun add -g @linchpinagency/cli          # bun
+yarn global add @linchpinagency/cli     # yarn 1.x only; yarn 2+ has no global add
 ```
 
-## Team setup guide
-
-### 1. Prerequisites
-
-- `git` 2.37+ (worktree support).
-- Node.js `22.12+` and `npm`.
-- Optional: `fzf` for interactive `linchpin wt cd`.
-- A local WordPress environment (Studio, `wp-env`, or LocalWP).
-- Your plugin repository cloned under `~/Documents/GitHub/<plugin-name>`.
-
-### 2. Install CLI
+Verify the install, which is also the fastest way to confirm your `PATH` picked up your package
+manager's global bin directory:
 
 ```bash
-npm install -g @linchpinagency/cli
+linchpin version
+# @linchpinagency/cli 1.1.3
+# Up to date (checked just now)
 ```
 
-Confirm install:
+If your shell reports `command not found`, the global bin directory is missing from `PATH`.
+`npm prefix -g` prints it; add `$(npm prefix -g)/bin` to your shell profile.
 
-```bash
-linchpin --help
-linchpin wt help
-```
+### Install the shell wrapper (recommended)
 
-### 3. Initialize project config
-
-From the plugin or theme repo root (base worktree), run:
-
-```bash
-linchpin wt config init
-```
-
-When run in an interactive terminal, you're guided through:
-
-1. **Agents** – Which agent base path(s) you use (Conductor, Claude Code, Codex, and/or Custom Path). You can select **multiple agents** so worktrees are found whether you're under Codex, Conductor, or another path — this avoids detached-HEAD issues when switching between agents. If you pick more than one, you choose a **default agent** for new worktrees.
-2. **Plugin, theme, or wp-content** – Whether this repo is a WordPress plugin, theme, or a full wp-content project (the entire wp-content folder is the repo). You can pre-select this with `--type <plugin|theme|wp-content>`.
-3. **Slug / symlink name** – For plugins and themes, the WordPress directory name (defaults to the repo directory name). For wp-content projects, the symlink name (defaults to `wp-content`) — useful when your repo has a client name instead of `wp-content`.
-4. **Environment(s)** – For each environment: **Environment type** (Studio, LocalWP, wp-env, or Other), which sets the base folder; then for Studio/LocalWP you **pick a site** from that base (list or `fzf` if installed), or for wp-env you enter the WordPress root path; for Other you enter name and full path.
-5. Choose the **default environment** for `linchpin wt switch`.
-
-This creates `.linchpin.json`. You can edit it later if paths or environments change.
-
-6. **Create initial symlink(s)** – If the target already exists as a real folder (not a symlink), you're prompted to **back it up** (rename with `.bkp` suffix), **delete** it (with confirmation), or **skip** that environment.
-
-If `.linchpin.json` already exists, the flow offers **Overwrite**, **Edit** (keep existing and add more environments), or **Cancel**.
-
-For scripts or CI (no TTY), use non-interactive mode so a default template is written without prompts:
-
-```bash
-linchpin wt config init --type <plugin|theme|wp-content> [--plugin-slug <slug>] [--force] [--no-interactive]
-```
-
-Use `--type wp-content` when your repo represents an entire wp-content folder (common for client projects where the repo is named after the client, not `wp-content`). Use `--force` to overwrite an existing `.linchpin.json` without prompting. Use `--no-interactive` to skip prompts even when running in a terminal.
-
-### 4. Paths built by config init
-
-For Studio and LocalWP, paths are built from the environment type and the site you pick:
-
-- **Studio**: `~/Studio/<site>/wp-content/plugins|themes/<slug>` (or `~/Studio/<site>/wp-content` for wp-content projects)
-- **LocalWP**: `~/Local Sites/<site>/app/public/wp-content/plugins|themes/<slug>` (or `…/wp-content` for wp-content projects)
-- **wp-env**: You provide the WordPress root; the CLI appends `wp-content/plugins|themes/<slug>` (or `wp-content` for wp-content projects).
-
-Use absolute paths in `.linchpin.json` if you edit by hand. `~` is supported.
-
-### 5. Create and switch worktrees
-
-Create a worktree for a new branch:
-
-```bash
-linchpin wt new feature/my-change
-```
-
-Or attach an existing remote branch:
-
-```bash
-linchpin wt get feature/existing-branch
-```
-
-Point your WordPress environment to that worktree:
-
-```bash
-linchpin wt switch feature/my-change --env studio
-```
-
-### 6. Verify active target
-
-Check current worktree metadata:
-
-```bash
-linchpin wt current --link --env studio
-```
-
-List all worktrees:
-
-```bash
-linchpin wt ls
-```
-
-### 7. Daily review workflow
-
-1. Open or create a worktree for the branch under review.
-2. Run `linchpin wt switch --env <environment>` to repoint the plugin symlink.
-3. Test the branch in the shared WordPress install.
-4. Repeat for the next worktree/branch.
-5. Clean up with `linchpin wt del` when the branch is merged.
-
-### 8. Switch and cd in one step
-
-After `wt switch` repoints a symlink your shell is still in the **old** worktree. Wrap the command in `cd` to land in the new target automatically:
-
-```bash
-cd "$(linchpin wt switch feature/my-change)"
-cd "$(linchpin wt switch)"                     # interactive picker
-cd "$(linchpin wt switch --env localwp)"       # specific environment
-```
-
-When piped (wrapped in `$()`), informational output goes to stderr so you still see it, while stdout carries the symlink path for `cd`.
-
-**Optional: fully automatic with shell-init**
-
-If you prefer `linchpin wt switch` to handle the `cd` for you every time, add this to your shell profile (`~/.zshrc`, `~/.bashrc`, or `~/.config/fish/config.fish`):
+A child process cannot change its parent shell's directory. Without the wrapper, `linchpin wt
+switch` repoints the symlink but leaves your shell sitting in the **old** worktree. Add this to
+`~/.zshrc`, `~/.bashrc` or `~/.config/fish/config.fish`:
 
 ```bash
 eval "$(linchpin shell-init)"
 ```
 
-This defines a thin wrapper that re-enters your current directory after a successful switch, so the shell picks up the repointed symlink. The shell is auto-detected from `$SHELL`. To force a specific shell: `eval "$(linchpin shell-init --shell zsh)"`.
+The shell is detected from `$SHELL`; force one with `linchpin shell-init --shell fish`. If you
+would rather not add anything to your profile, wrap the command instead —
+`cd "$(linchpin wt switch feature/x)"` — which works because path output goes to stdout while
+everything informational goes to stderr.
 
-### 9. Path helpers
+### Install from source
 
-Use command substitution for other path-returning commands:
-
-```bash
-cd "$(linchpin wt cd)"
-cd "$(linchpin wt home)"
-```
-
-### 10. Troubleshooting
-
-- `Missing .linchpin.json`:
-  Run `linchpin wt config init` in the base worktree (interactive prompts) or `linchpin wt config init --type plugin --plugin-slug <slug> --no-interactive` for a default file.
-- `Environment '<name>' is not configured`:
-  Add the environment key in `.linchpin.json`.
-- `Target exists and is not a symlink`:
-  Use `linchpin wt switch ... --force` only if replacing the directory is intended.
-- `Worktree has uncommitted changes` on delete:
-  Commit/stash first, or force with `linchpin wt del --force`.
-- `fzf is not installed`:
-  Install `fzf` or pass a branch/path directly to `linchpin wt cd <ref>`.
-
-## Command surface
+For contributing, or to run an unreleased branch:
 
 ```bash
-linchpin shell-init [--shell bash|zsh|fish]
-
-linchpin wt ls [--json]
-linchpin wt current [--link] [--env <name>]
-linchpin wt switch [worktree|branch] [--env <name>] [--force] [--dry-run]
-  # No argument in a TTY: interactive picker from available worktrees. Non-interactive: use current worktree.
-  # When piped, outputs the symlink target path for cd: cd "$(linchpin wt switch ...)"
-
-linchpin wt new [name]
-linchpin wt get <branch>
-linchpin wt extract
-linchpin wt mv <new-branch-name>
-linchpin wt del [-f|--force]
-linchpin wt cd [branch|path]
-linchpin wt home
-linchpin wt use
-linchpin wt gone
-linchpin wt copy <path>
-linchpin wt link <path>
-linchpin wt invoke <hook>
-
-linchpin wt config init [--type <plugin|theme|wp-content>] [--plugin-slug <slug>] [--force] [--no-interactive]
-linchpin wt config show
+git clone https://github.com/linchpin/cli.git
+cd cli
+npm install
+npm run build
+npm link            # puts this working tree on your PATH as `linchpin`
 ```
 
-Shell usage notes:
+`linchpin version` reports a source install and will tell you to use `git pull` rather than a
+package manager. Undo it with `npm unlink -g @linchpinagency/cli`.
 
-- `linchpin wt cd` and `linchpin wt home` return paths for command substitution.
-- Use `cd "$(linchpin wt cd)"` and `cd "$(linchpin wt home)"`.
-- `linchpin wt cd` uses `fzf` when no argument is provided.
+## Set up a project
+
+Run this once per repository, from the **base worktree** (the original clone, not a worktree):
+
+```bash
+cd ~/Documents/GitHub/my-plugin
+linchpin wt config init
+```
+
+In a terminal you are walked through five questions, and the answers become `.linchpin.json`:
+
+1. **Agents** — which agent base path(s) you use (Conductor, Claude Code, Codex, or a custom
+   path). Pick **several** if you work under more than one, so worktrees are found wherever they
+   were created; this is what avoids detached-HEAD surprises when switching between agents. With
+   more than one, you also choose a default for new worktrees.
+2. **Plugin, theme, or wp-content** — what this repo is. Pre-select it with
+   `--type <plugin|theme|wp-content>`. Use `wp-content` when the repo *is* an entire wp-content
+   directory, which is common on client projects named after the client.
+3. **Slug / symlink name** — the WordPress directory name, defaulting to the repo directory
+   name (or `wp-content` for a wp-content project).
+4. **Environment(s)** — pick Studio, LocalWP, wp-env or Other. Studio and LocalWP list your
+   sites to choose from (`fzf` if installed); wp-env asks for the WordPress root; Other asks for
+   a name and a full path.
+5. **Default environment** — which one `linchpin wt switch` uses when `--env` is omitted.
+
+Paths are then built for you:
+
+| Environment | Path built |
+| --- | --- |
+| Studio | `~/Studio/<site>/wp-content/plugins\|themes/<slug>` |
+| LocalWP | `~/Local Sites/<site>/app/public/wp-content/plugins\|themes/<slug>` |
+| wp-env | `<root you gave>/wp-content/plugins\|themes/<slug>` |
+
+Finally, if the target already exists as a **real directory** rather than a symlink, you are
+asked to back it up (`.bkp` suffix), delete it, or skip that environment. Nothing is replaced
+silently.
+
+Re-running `config init` on a repo that already has `.linchpin.json` offers **Overwrite**,
+**Edit** (keep what is there and add environments), or **Cancel**.
+
+For scripts, CI, or an agent, skip the prompts entirely:
+
+```bash
+linchpin wt config init --type plugin --plugin-slug my-plugin --no-interactive
+linchpin wt config show          # what the CLI actually resolved
+```
+
+## Daily use
+
+```bash
+linchpin wt new feature/checkout          # new branch + worktree
+linchpin wt get feature/existing         # attach an existing remote branch
+cd "$(linchpin wt switch feature/checkout --env studio)"
+```
+
+That third line is the whole point: your one WordPress install now loads that worktree. Review
+the branch, then move on:
+
+```bash
+linchpin wt ls                            # every worktree for this repo
+linchpin wt current --link --env studio    # what the symlink points at right now
+cd "$(linchpin wt switch)"                # no argument in a TTY: pick from a list
+linchpin wt del                           # clean up once the branch is merged
+```
+
+With no argument and no TTY, `wt switch` uses the current worktree rather than prompting —
+which is what lets an agent call it safely.
+
+Guardrails, so a switch can't quietly eat your work:
+
+- An existing **symlink** target is repointed.
+- An existing **real directory** is refused unless you pass `--force`.
+- `wt del` refuses a worktree with uncommitted changes or an unmerged branch unless forced.
+
+## Staying up to date
+
+The CLI knows what version it is and whether a newer one has been published.
+
+### Being told about it
+
+When a newer version exists, a notice is written to **stderr** after your command completes:
+
+```
+Update available: 1.1.3 → 1.2.0
+  Run: linchpin update
+```
+
+Four things make that notice safe to leave on:
+
+- **It costs nothing.** The version is read from a small cache file, never from the network, so
+  no command waits on a registry round trip. When the cache is more than 24 hours old a detached
+  background process refreshes it and exits; nothing blocks on it.
+- **It never touches stdout.** `cd "$(linchpin wt switch)"` and `eval "$(linchpin shell-init)"`
+  keep working, and a `--json` envelope stays the only thing on stdout.
+- **Machine readers never see it.** It is suppressed in `--json` and `--quiet` mode, in CI, and
+  when an agent is driving. An agent that wants the facts asks for them:
+  `linchpin version --check --json`.
+- **It is one line, and you can turn it off.** Set `LINCHPIN_NO_UPDATE_NOTIFIER=1` (or the
+  conventional `NO_UPDATE_NOTIFIER=1`).
+
+### Asking directly
+
+```bash
+linchpin --version           # just the number, for scripts that parse it
+linchpin version             # version + cached update state + how it was installed
+linchpin version --check     # ask the registry now, then cache the answer
+linchpin version --check --json
+```
+
+`linchpin version` always exits **0**, including when the registry is unreachable — it is safe
+in a shell prompt or a status line. The JSON form carries everything a bug report or an agent
+needs:
+
+```json
+{
+  "version": 1, "ok": true, "command": "version",
+  "data": {
+    "name": "@linchpinagency/cli",
+    "current": "1.1.3",
+    "latest": "1.2.0",
+    "updateAvailable": true,
+    "checkedAt": "2026-08-26T14:17:31.655Z",
+    "source": "registry",
+    "checkError": null,
+    "install": {
+      "manager": "npm", "scope": "global",
+      "path": "/opt/homebrew/lib/node_modules/@linchpinagency/cli/dist/cli.js",
+      "updateCommand": "npm install -g @linchpinagency/cli@latest"
+    },
+    "cachePath": "/Users/you/.cache/linchpin/update-check.json",
+    "node": "24.14.1"
+  }
+}
+```
+
+### Updating
+
+```bash
+linchpin update              # install the latest published version
+linchpin update --dry-run    # print the command it would run, and stop
+linchpin update --check      # read-only; exits 3 if an update is pending
+```
+
+`update` works out how *this* copy was installed — from the path it is running from, not a
+guess — and runs the matching command, so a pnpm or bun install is never handed an
+`npm install -g` that would leave two copies shadowing each other:
+
+| How it was installed | What `linchpin update` runs |
+| --- | --- |
+| npm, global | `npm install -g @linchpinagency/cli@latest` |
+| npm, project-local | `npm install @linchpinagency/cli@latest` |
+| pnpm | `pnpm add -g @linchpinagency/cli@latest` |
+| bun | `bun add -g @linchpinagency/cli@latest` |
+| yarn 1.x | `yarn global add @linchpinagency/cli@latest` |
+| `npx` | Nothing — each run already fetches the latest |
+| source checkout / `npm link` | Nothing. It tells you to `git pull && npm install && npm run build` |
+
+`--check` exits **3** ("precondition not met") when an update is pending and **0** when there is
+nothing to do, so it can gate a job without any parsing:
+
+```bash
+linchpin update --check || echo "CLI is behind — releasing with an old toolchain"
+```
+
+### Environment variables
+
+| Variable | Effect |
+| --- | --- |
+| `LINCHPIN_NO_UPDATE_NOTIFIER` / `NO_UPDATE_NOTIFIER` | Never print the update notice |
+| `LINCHPIN_REGISTRY` | Registry to check, for a mirror or an air-gapped network. Falls back to `npm_config_registry`, then npmjs.org |
+| `LINCHPIN_CACHE_DIR` | Where the update-check cache lives. Defaults to `$XDG_CACHE_HOME/linchpin`, then `~/.cache/linchpin` |
+| `LINCHPIN_OUTPUT` | `json`, `quiet`, `human` — set the output mode once instead of per call |
+| `NO_COLOR` / `FORCE_COLOR` | Standard colour control |
+
+## Uninstall
+
+Remove the binary with whichever package manager installed it — `linchpin version` names it
+under `install.manager` if you are unsure:
+
+```bash
+npm uninstall -g @linchpinagency/cli
+pnpm remove -g @linchpinagency/cli
+bun remove -g @linchpinagency/cli
+yarn global remove @linchpinagency/cli
+npm unlink -g @linchpinagency/cli       # a source install made with npm link
+```
+
+Then clean up the two things that live outside the package. First the update-check cache —
+`linchpin version --json` reports its exact location as `cachePath`, and by default it is:
+
+```bash
+rm -rf ~/.cache/linchpin
+```
+
+Second, delete the `eval "$(linchpin shell-init)"` line from your shell profile, or every new
+shell will print `command not found`.
+
+Nothing else is left behind. In particular:
+
+- **`.linchpin.json` and `.linchpin/hooks/` are project files**, committed to the repository and
+  shared with your team. Uninstalling the CLI does not touch them, and it should not — a
+  teammate still needs them.
+- **Your worktrees and symlinks are untouched.** They are plain git worktrees and plain
+  symlinks; the CLI only ever pointed them at each other. Remove worktrees with
+  `git worktree remove` (or `linchpin wt del` before uninstalling) and delete a symlinked plugin
+  slot with `rm` — you are deleting a link, not your code.
 
 ## Configuration
 
-Create `.linchpin.json` in the base repository root. The easiest way is to run `linchpin wt config init` in a terminal and follow the prompts. You can also create or edit the file manually:
-
-Plugin/theme project:
-
-```json
-{
-  "agent": "conductor",
-  "agentBasePath": "/Users/you/conductor",
-  "wordpress": {
-    "contentType": "plugin",
-    "pluginSlug": "my-plugin",
-    "defaultEnvironment": "studio",
-    "environments": {
-      "studio": "/Users/you/Sites/studio/wp-content/plugins/my-plugin",
-      "wp-env": "/Users/you/Documents/projects/site/.wp-env/.../plugins/my-plugin",
-      "localwp": "/Users/you/Local Sites/site/app/public/wp-content/plugins/my-plugin"
-    }
-  }
-}
-```
-
-WP-content project (repo is the entire wp-content folder):
-
-```json
-{
-  "agent": "conductor",
-  "wordpress": {
-    "contentType": "wp-content",
-    "defaultEnvironment": "localwp",
-    "environments": {
-      "localwp": "/Users/you/Local Sites/site/app/public/wp-content"
-    }
-  }
-}
-```
-
-Multi-agent (Codex and Conductor, etc.) — we look for worktrees in all listed paths:
+`.linchpin.json` lives in the base repository root. `linchpin wt config init` writes it; this is
+what it writes. Full reference in [docs/configuration.md](docs/configuration.md).
 
 ```json
 {
@@ -324,13 +385,14 @@ Multi-agent (Codex and Conductor, etc.) — we look for worktrees in all listed 
     "pluginSlug": "my-plugin",
     "defaultEnvironment": "studio",
     "environments": {
-      "studio": "/Users/you/Sites/studio/wp-content/plugins/my-plugin"
+      "studio": "/Users/you/Studio/mysite/wp-content/plugins/my-plugin",
+      "localwp": "/Users/you/Local Sites/mysite/app/public/wp-content/plugins/my-plugin"
     }
   }
 }
 ```
 
-If the repo uses a custom symlink name (e.g. the repo is named after the client), add `"symlinkName"`:
+A repo that is an entire wp-content directory, under a name that is not `wp-content`:
 
 ```json
 {
@@ -345,127 +407,53 @@ If the repo uses a custom symlink name (e.g. the repo is named after the client)
 }
 ```
 
-Behavior notes:
+Notes that save an afternoon:
 
-- **Agent / base path**: You can use a single agent or **multiple agents**. Single-agent config uses `agent` (Conductor, Claude Code, Codex, or Custom Path) and optional `agentBasePath`. Multi-agent config uses `agents` (object of name → base path) and optional `defaultAgent`. Default base paths: Conductor `~/conductor`, Claude Code `~/Documents`, Codex `~/Documents/GitHub`. For Custom Path you’re prompted for a base path during `config init`. When you use multiple agents (e.g. Codex for some work and Conductor for another), we look for worktrees in all configured paths so the correct main repo is found and detached-HEAD issues are avoided.
-- If `defaultEnvironment` is omitted, the first environment key is used.
-- `~` is supported in configured paths.
-- `linchpin wt switch` without a worktree argument: in an interactive terminal you get a **picker** of available worktrees; in non-interactive use it uses the current worktree.
+- **One agent or many.** A single agent uses `agent` plus an optional `agentBasePath`; several
+  use `agents` (name → base path) plus an optional `defaultAgent`. Defaults: Conductor
+  `~/conductor`, Claude Code `~/Documents`, Codex `~/Documents/GitHub`. With several configured,
+  every path is searched, so the right base repo is found no matter which agent made the
+  worktree.
+- `defaultEnvironment` may be omitted; the first environment key wins.
+- `~` is expanded. Anything else should be absolute.
 
 ## Hooks
 
-Hook files are sourced in a subshell when present:
+Twelve lifecycle points let a project run its own build, cache flush or fixup around each
+operation. A hook is a file at `.linchpin/hooks/<name>`, **sourced** in a subshell with the
+worktree as the working directory:
 
-- `.linchpin/hooks/<hook-name>`
-
-Supported lifecycle hooks:
-
-- `pre-switch`, `post-switch`
-- `pre-new`, `post-new`
-- `pre-get`, `post-get`
-- `pre-extract`, `post-extract`
-- `pre-mv`, `post-mv`
-- `pre-del`, `post-del`
-
-Manual invocation:
+`pre-switch` · `post-switch` · `pre-new` · `post-new` · `pre-get` · `post-get` ·
+`pre-extract` · `post-extract` · `pre-mv` · `post-mv` · `pre-del` · `post-del`
 
 ```bash
-linchpin wt invoke pre-new
-linchpin wt invoke post-switch
-```
-
-Hook environment variables include `LINCHPIN_BRANCH`, `LINCHPIN_WORKTREE`, and for switch hooks `LINCHPIN_ENVIRONMENT`.
-
-To run commands after switching worktrees (e.g. `composer install`, `npm run build`), create `.linchpin/hooks/post-switch`. The hook runs with the worktree as the current directory:
-
-```bash
-#!/bin/bash
+# .linchpin/hooks/post-switch — rebuild whatever the new branch needs
 composer install
 npm install && npm run build
 ```
 
-## Typical WordPress review flow
+`LINCHPIN_BRANCH` and `LINCHPIN_WORKTREE` are always set; switch hooks also get
+`LINCHPIN_ENVIRONMENT`. Run one by hand with `linchpin wt invoke post-switch`. Details and the
+full environment contract: [docs/hooks.md](docs/hooks.md).
 
-1. Open a plugin worktree.
-2. Run `cd "$(linchpin wt switch --env studio)"` to repoint the symlink and land in the new target.
-3. Use your existing WordPress environment to review that branch.
-4. Move to another worktree and switch again.
-
-## Safety behavior
-
-- Existing symlink targets are repointed safely.
-- Existing non-symlink targets are blocked unless `--force` is used.
-- `linchpin wt del` blocks dirty or unmerged branches unless forced.
-
-## Development
-
-```bash
-npm install
-npm run typecheck   # tsc --noEmit
-npm run build       # tsdown -> dist/
-npm test            # builds first, then node --test
-```
-
-The CLI is TypeScript and ESM, built with [tsdown](https://tsdown.dev). Every runtime
-dependency lives in `devDependencies` and is bundled into `dist/`, so the published package
-installs with **zero transitive dependencies**. Un-ported CommonJS still lives in `legacy/`,
-which carries its own `package.json` declaring `"type": "commonjs"`; it is being drained into
-`src/` command by command.
-
-Husky enforces Conventional Commits on `commit-msg`:
-
-```bash
-npm run prepare
-```
-
-Example commit format:
-
-```text
-feat(LINCHPIN-4850): add release automation
-```
-
-### Continuous integration
-
-`.github/workflows/ci.yml` runs on every pull request and on pushes to `main`: typecheck,
-build and tests across Node **22.12** (the `engines` floor) and **24**.
-
-It also gates on **agent-readiness** using
-[`cli-agent-lint`](https://github.com/Camil-H/cli-agent-lint), which grades a CLI A–F across
-34 checks covering flow safety, token efficiency, self-description, automation safety and
-predictability.
-
-CI fails if the score drops below a recorded floor, and the floor rises whenever the score
-does, so a gain can't be given back silently.
-
-| Recorded | Score | Where | What moved |
-| --- | --- | --- | --- |
-| 2026-08-06 | 77.2% (B) | local | Baseline, pre-rewrite surface |
-| 2026-08-06 | 80.7% (B) | local | Command registry — usage examples in help, actionable errors, control characters rejected in argv |
-| 2026-08-06 | **84.7% (B)** | **CI** | Dual-mode contract — `--json`, `--quiet`, `--no-color`, documented exit codes |
-
-⚠️ **Record the number CI reports, not a local run.** SD-5 (skill / context files) passes on a
-workstation off an untracked, gitignored `.claude/` directory that doesn't exist in a clean
-checkout, so local runs read roughly 1.7 points high. The first two rows above were measured
-locally and are inflated for that reason; CI is the gate, so CI is the measurement.
-
-Still outstanding: shell completions and schema introspection (SD-3/SD-4), env-var auth
-(FS-4, arrives with `linchpin task`), skill/context files (SD-5, arrives with the bundled
-skills), and a `--timeout` flag (PV-1).
-
-One check stays a warning **on purpose**. SD-1 wants errors to be JSON on stderr by default;
-this CLI is human-readable by default and structured only when asked (`--json`), matching
-`gh` and `wrangler`. In `--json` mode stdout carries exactly one envelope and stderr stays
-empty, including on failure.
-
-## Output modes and exit codes
+## Agents, output modes and exit codes
 
 Mode is decided once at startup: an explicit `--json` / `--plain` / `--quiet` flag, then
-`LINCHPIN_OUTPUT`, then whether stdout is a TTY. Warnings always go to stderr so stdout stays
-parseable.
+`LINCHPIN_OUTPUT`, then whether stdout is a TTY. Warnings and notices always go to stderr so
+stdout stays parseable.
 
-⚠️ **`CI` is unset inside Claude Code while no stream is a TTY.** Anything that gates
-prompting on a CI check alone classifies an agent as interactive and blocks forever. The
-non-TTY check is the safety net.
+```bash
+linchpin wt ls --json
+linchpin version --check --json
+```
+
+In `--json` mode stdout carries exactly one envelope and stderr stays empty — including on
+failure, which is precisely when structured output matters most. `changed` distinguishes a real
+mutation from a no-op.
+
+```json
+{"version":1,"ok":true,"command":"wt switch","changed":true,"data":{"branch":"feature-b"}}
+```
 
 | Code | Meaning |
 | --- | --- |
@@ -476,13 +464,101 @@ non-TTY check is the safety net.
 | 4 | Authentication required or rejected |
 | 5 | Refused by a safety check |
 
+⚠️ **`CI` is unset inside Claude Code while no stream is a TTY.** Anything that gates prompting
+on a CI check alone classifies an agent as interactive and blocks forever. The non-TTY check is
+the safety net. More on why this shapes the whole design:
+[docs/agent-integration.md](docs/agent-integration.md).
+
+## Troubleshooting
+
+| Symptom | Fix |
+| --- | --- |
+| `command not found: linchpin` | The global bin dir is not on `PATH`. Add `$(npm prefix -g)/bin` |
+| `Missing .linchpin.json` | Run `linchpin wt config init` in the **base** worktree, not a worktree |
+| `Environment '<name>' is not configured` | Add the key under `wordpress.environments`, or pass `--env` with one that exists |
+| `Target exists and is not a symlink` | A real directory is in the plugin slot. Back it up, or pass `--force` if replacing it is intended |
+| `Worktree has uncommitted changes` on delete | Commit or stash first, or `linchpin wt del --force` |
+| `fzf is not installed` | Install `fzf`, or pass a branch or path directly: `linchpin wt cd <ref>` |
+| Your shell stays in the old worktree after a switch | Install the wrapper: `eval "$(linchpin shell-init)"`, or use `cd "$(linchpin wt switch …)"` |
+| Update notice will not go away | You are on an older version. `linchpin update`, or silence it with `LINCHPIN_NO_UPDATE_NOTIFIER=1` |
+| `Could not reach the npm registry` | Offline, or behind a mirror. Set `LINCHPIN_REGISTRY` |
+
+## Development
+
+```bash
+npm install
+npm run typecheck   # tsc --noEmit
+npm run build       # tsdown -> dist/
+npm test            # builds first, then node --test
+```
+
+TypeScript and ESM, built with [tsdown](https://tsdown.dev). Every runtime dependency lives in
+`devDependencies` and is bundled into `dist/`, so the published package installs with **zero
+transitive dependencies**. Un-ported CommonJS still lives in `legacy/`, which carries its own
+`package.json` declaring `"type": "commonjs"`; it is being drained into `src/` command by
+command.
+
+Adding a command means adding one `defineCommand()` definition — flags come from its Zod schema,
+help grouping from `meta.group`, examples from `meta.examples`, and its `effect` classification
+from `read` / `write` / `destructive`. Nothing is hand-wired twice.
+
+The test suite never reaches the network: the update checker is exercised against a local
+registry stub, and the shared fixture sets `LINCHPIN_NO_UPDATE_NOTIFIER` so no test can be
+perturbed by a real release.
+
+Husky enforces Conventional Commits on `commit-msg` (`npm run prepare` installs it):
+
+```text
+feat(LINCHPIN-4850): add release automation
+```
+
+### Continuous integration
+
+`.github/workflows/ci.yml` runs on every pull request and on pushes to `main`: typecheck, build
+and tests across Node **22.12** (the `engines` floor) and **24**.
+
+It also gates on **agent-readiness** using
+[`cli-agent-lint`](https://github.com/Camil-H/cli-agent-lint), which grades a CLI A–F across 34
+checks covering flow safety, token efficiency, self-description, automation safety and
+predictability. CI fails if the score drops below a recorded floor, and the floor rises whenever
+the score does, so a gain can't be given back silently.
+
+| Recorded | Score | Where | What moved |
+| --- | --- | --- | --- |
+| 2026-08-06 | 77.2% (B) | local | Baseline, pre-rewrite surface |
+| 2026-08-06 | 80.7% (B) | local | Command registry — usage examples in help, actionable errors, control characters rejected in argv |
+| 2026-08-06 | **84.7% (B)** | **CI** | Dual-mode contract — `--json`, `--quiet`, `--no-color`, documented exit codes |
+
+⚠️ **Record the number CI reports, not a local run.** SD-5 (skill / context files) passes on a
+workstation off an untracked, gitignored `.claude/` directory that doesn't exist in a clean
+checkout, so local runs read roughly 1.7 points high.
+
+Still outstanding: shell completions and schema introspection (SD-3/SD-4), env-var auth (FS-4,
+arrives with `linchpin task`), skill/context files (SD-5, arrives with the bundled skills), and
+a `--timeout` flag (PV-1).
+
+One check stays a warning **on purpose**. SD-1 wants errors to be JSON on stderr by default;
+this CLI is human-readable by default and structured only when asked (`--json`), matching `gh`
+and `wrangler`.
+
 ## Releases
 
 Releases are managed by `release-please` in GitHub Actions:
 
-- Pushes to `main` run `.github/workflows/release-please.yml`.
-- `release-please` opens/updates a release PR from conventional commits.
-- When the release PR is merged, a GitHub release/tag is created.
-- If a release is created, the workflow publishes `@linchpinagency/cli` to npm.
+1. Pushes to `main` run `.github/workflows/release-please.yml`.
+2. `release-please` opens or updates a release PR from the conventional commits since the last
+   release.
+3. Merging that PR creates the GitHub release and tag.
+4. The `publish-npm` job then builds, tests and publishes to npm with provenance.
+
+Step 4 authenticates with the `NPM_TOKEN` repository secret, and that token needs write access
+to the **whole `@linchpinagency` scope** — a granular npm token only ever covers packages that
+existed when it was created, so one minted before a package's first publish cannot publish it.
+npm answers an unauthorized write with `404`, not `403`, so the symptom is a confusing
+`E404 … PUT https://registry.npmjs.org/@linchpinagency%2fcli`, not a permission error. The job
+verifies the credential before building so that failure names its own cause.
+
+A publish that failed for a credential reason needs no new release: fix the token and re-run the
+`publish-npm` job on the existing tag.
 
 ![Linchpin an award winning digital agency building immersive, high performing web experiences](https://assets.linchpin.com/github/linchpin-github-repo-banner.jpg)
