@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.1.3](https://github.com/linchpin/cli/compare/v1.1.2...v1.1.3) (2026-08-26)
+
+
+### Documentation 📚
+
+* **NO-TASK:** Add the repo task spec ([#63](https://github.com/linchpin/cli/issues/63)) ([43eff7c](https://github.com/linchpin/cli/commit/43eff7c06a32132477bfd7d0ee4ac1010847436e))
+
+
+### Miscellaneous Chores 🧹
+
+* **deps:** update commitlint monorepo to v21.2.2 ([#40](https://github.com/linchpin/cli/issues/40)) ([2f66834](https://github.com/linchpin/cli/commit/2f668348b93f70f5aab84f915d2d062b730b2e48))
+* **deps:** update dependency @inquirer/prompts to v8.6.0 ([#38](https://github.com/linchpin/cli/issues/38)) ([1c24db1](https://github.com/linchpin/cli/commit/1c24db1a448e2521607a0da3ff45f1600c0bd650))
+* **deps:** update dependency @linchpinagency/commitlint-config to v1.3.0 ([#61](https://github.com/linchpin/cli/issues/61)) ([d08a35c](https://github.com/linchpin/cli/commit/d08a35cc4ad4ac4f27023f5a0cc38ea9b02aa38e))
+* **deps:** update dependency @linchpinagency/commitlint-config to v1.3.1 ([#62](https://github.com/linchpin/cli/issues/62)) ([ce794a1](https://github.com/linchpin/cli/commit/ce794a13c50aaa8aa0afde93e174b5ace2007019))
+* **deps:** update dependency @vercel/detect-agent to v1.2.5 ([#60](https://github.com/linchpin/cli/issues/60)) ([f533384](https://github.com/linchpin/cli/commit/f533384d87a4ce6bacb94427acb681bf2711fe0d))
+
 ## [1.1.2](https://github.com/linchpin/cli/compare/v1.1.1...v1.1.2) (2026-08-08)
 
 
