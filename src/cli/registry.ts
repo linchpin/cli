@@ -1,5 +1,8 @@
 import { z } from 'zod';
 
+import type { Manifest } from '../version.js';
+import type { Output } from './output.js';
+
 /**
  * What a command does to the world.
  *
@@ -70,6 +73,14 @@ export interface ArgMeta {
 
 export interface CommandContext {
   readonly argv: readonly string[];
+  /**
+   * The single seam to the terminal. A handler renders through this rather than
+   * writing to a stream, which is what keeps the `--json` surface and the human
+   * one two renderings of one value instead of two code paths.
+   */
+  readonly output: Output;
+  /** Name and version of the running package, read once at startup. */
+  readonly manifest: Manifest;
 }
 
 export type CommandHandler<S extends z.ZodType> = (

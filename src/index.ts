@@ -127,4 +127,36 @@ export {
   type HookPhase,
 } from './core/hooks.js';
 
-export { readVersion } from './version.js';
+export { readManifest, readVersion, type Manifest } from './version.js';
+
+export {
+  CHECK_INTERVAL_MS,
+  FETCH_TIMEOUT_MS,
+  REGISTRY_URL,
+  cacheDirectory,
+  compareVersions,
+  currentInstallPath,
+  detectInstallation,
+  fetchLatestVersion,
+  formatAge,
+  formatCommand,
+  isCacheFresh,
+  isUpdateAvailable,
+  readUpdateCache,
+  resolveUpdateStatus,
+  updateCachePath,
+  writeUpdateCache,
+  type InstallScope,
+  type Installation,
+  type PackageManager,
+  type UpdateCache,
+  type UpdateSource,
+  type UpdateStatus,
+} from './core/update.js';
+
+export {
+  CHILD_ENV_FLAG,
+  notificationsAllowed,
+  notifyAboutUpdates,
+  renderUpdateNotice,
+} from './cli/update-notifier.js';

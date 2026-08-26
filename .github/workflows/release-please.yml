@@ -48,6 +48,29 @@ jobs:
           node-version: '22.12'
           registry-url: https://registry.npmjs.org
 
+      # Before spending a build on it. npm answers an *unauthorized* write with
+      # 404 rather than 403, so a bad credential surfaces as
+      # "E404 ... PUT https://registry.npmjs.org/@linchpinagency%2fcli - Not found"
+      # at the very end of the job, reading as if the package did not exist.
+      # Every release from v1.1.0 to v1.1.3 failed exactly that way while 1.1.1
+      # was hand-published from a workstation to cover it. Prove the credential
+      # up front so the failure names itself.
+      - name: Verify npm credentials
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -z "$NODE_AUTH_TOKEN" ]; then
+            echo "::error::NPM_TOKEN is not set on this repository. Mint a token with write access to the whole @linchpinagency scope and add it as the NPM_TOKEN secret."
+            exit 1
+          fi
+
+          if ! whoami_output="$( npm whoami 2>&1 )"; then
+            echo "::error::NPM_TOKEN does not authenticate against the registry: ${whoami_output}. It is expired, revoked, or not an npm token."
+            exit 1
+          fi
+
+          echo "Authenticated to npm as ${whoami_output}"
+
       # Required before anything runs. `npm test` triggers `pretest -> build`,
       # and the build needs devDependencies. Without this the job fails with
       # "tsdown: not found" — which is exactly how v1.1.0 came to be tagged and
@@ -63,7 +86,18 @@ jobs:
           HUSKY: 0
 
       - name: Publish to npm
-        run: npm publish --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           HUSKY: 0
+        run: |
+          if npm publish --access public --provenance; then
+            exit 0
+          fi
+
+          # Identity was proven in the preflight, so a 404 here can only be a
+          # permissions problem. A granular npm token covers the packages that
+          # existed when it was minted and nothing added later — which is how a
+          # token created before this package's first publish can authenticate
+          # perfectly and still be unable to publish it.
+          echo "::error::npm publish failed. The token authenticates but may not be allowed to write @linchpinagency/cli — grant it the whole @linchpinagency scope, or move this job to npm trusted publishing (OIDC, no secret, needs npm >= 11.5.1). Re-run this job on the existing tag once fixed; no new release is required."
+          exit 1

@@ -8,7 +8,9 @@ import { COMMANDS } from './cli/commands/index.js';
 import { EXIT_CODES } from './cli/errors.js';
 import { Output, resolveOutputMode, type OutputMode } from './cli/output.js';
 import { CommandError, assertNoControlCharacters, buildProgram } from './cli/program.js';
-import { readVersion } from './version.js';
+import { notifyAboutUpdates } from './cli/update-notifier.js';
+import { detectInstallation } from './core/update.js';
+import { readManifest } from './version.js';
 
 /** Read the mode flags before Commander parses, so failures render correctly too. */
 function readModeFlags(argv: readonly string[]): {
@@ -31,18 +33,26 @@ function readModeFlags(argv: readonly string[]): {
  */
 export async function run(
   argv: readonly string[],
-  options: { mode?: OutputMode } = {}
+  options: { mode?: OutputMode; output?: Output } = {}
 ): Promise<number> {
   assertNoControlCharacters(argv);
 
+  const manifest = readManifest();
+  const output =
+    options.output ?? new Output(options.mode ?? resolveOutputMode(readModeFlags(argv)));
+
   const program = buildProgram(COMMANDS, {
     name: 'linchpin',
-    version: readVersion(),
+    version: manifest.version,
+    manifest,
+    output,
     description: "Linchpin's command line tool for WordPress and agent workflows",
     examples: [
       'linchpin wt ls                        List worktrees for this repo',
       'linchpin wt switch feature/checkout   Point the local site at a worktree',
       'linchpin shell-init >> ~/.zshrc       Install the directory-changing wrapper',
+      'linchpin version --check              Check whether a newer release exists',
+      'linchpin update                       Install the latest version',
       'linchpin <command> --help             Help for one command',
     ],
   });
@@ -55,7 +65,10 @@ export async function run(
   // writes its own plain-text usage errors, which would hand an agent
   // unparseable output at exactly the moment it asked for JSON — so silence it
   // and let the envelope carry the message instead.
-  const jsonMode = options.mode === 'json';
+  // Read from the resolved renderer, not the raw option: the entry point hands
+  // in an Output it already built, and reading `options.mode` here would leave
+  // Commander free to write plain-text usage errors into a JSON stream.
+  const jsonMode = output.mode === 'json';
   if (jsonMode) {
     program.configureOutput({ writeErr: () => {}, writeOut: () => {} });
   }
@@ -107,12 +120,34 @@ function isEntryPoint(): boolean {
   }
 }
 
+/**
+ * Tell the user about a newer release, after their command has finished.
+ *
+ * Deliberately last: reading a cache file and spawning a detached refresh must
+ * never be able to affect the exit code or the output of the thing they ran, so
+ * every failure in here is swallowed.
+ */
+function reportUpdates(output: Output, argv: readonly string[]): void {
+  try {
+    const manifest = readManifest();
+
+    notifyAboutUpdates(output, {
+      current: manifest.version,
+      installation: detectInstallation(manifest.name),
+      entryPath: fileURLToPath(import.meta.url),
+      commandName: argv.find((argument) => !argument.startsWith('-')),
+    });
+  } catch {
+    // An update notice is never worth failing a command over.
+  }
+}
+
 if (isEntryPoint()) {
   const argv = process.argv.slice(2);
   const output = new Output(resolveOutputMode(readModeFlags(argv)));
 
   try {
-    process.exitCode = await run(argv, { mode: output.mode });
+    process.exitCode = await run(argv, { output });
   } catch (error) {
     // Commander-originated failures arrive with an empty message because it has
     // already reported them; rendering again would duplicate the output.
@@ -122,4 +157,6 @@ if (isEntryPoint()) {
       process.exitCode = output.failure(argv[0] ?? 'linchpin', error);
     }
   }
+
+  reportUpdates(output, argv);
 }
