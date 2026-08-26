@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/linchpin/cli/compare/v1.1.3...v1.2.0) (2026-08-26)
+
+
+### Features ✨
+
+* **NO-TASK:** Add version detection and self-update, and document the CLI as a whole ([#64](https://github.com/linchpin/cli/issues/64)) ([bf13560](https://github.com/linchpin/cli/commit/bf135604121b84e04893e6df6fa89986c9279ff9))
+
 ## [1.1.3](https://github.com/linchpin/cli/compare/v1.1.2...v1.1.3) (2026-08-26)
 
 
