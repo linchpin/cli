@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1](https://github.com/linchpin/cli/compare/v1.2.0...v1.2.1) (2026-08-27)
+
+
+### Miscellaneous Chores 🧹
+
+* **deps:** update dependency @inquirer/prompts to v8.7.0 ([#66](https://github.com/linchpin/cli/issues/66)) ([e1e9913](https://github.com/linchpin/cli/commit/e1e991318d9f2624bb3ccc447a8175f67427d562))
+
 ## [1.2.0](https://github.com/linchpin/cli/compare/v1.1.3...v1.2.0) (2026-08-26)
 
 
