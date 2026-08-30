@@ -351,3 +351,81 @@ test('version and update are registered as read and write', async () => {
   assert.equal(byName.version.effect, 'read', 'version must be allowlistable without a prompt');
   assert.equal(byName.update.effect, 'write');
 });
+
+test('the notice file is written, refreshed and taken down by the CLI itself', async (t) => {
+  const registry = await startRegistry('99.0.0');
+  t.after(() => registry.close());
+
+  const install = fakeGlobalInstall();
+  const cacheDir = tempDir('linchpin-cache-');
+  const noticePath = path.join(cacheDir, 'update-notice.txt');
+  const env = { LINCHPIN_REGISTRY: registry.url, LINCHPIN_CACHE_DIR: cacheDir };
+
+  // `version --check` is what the shell snippet spawns in the background, so it
+  // is the thing that has to leave a notice behind for the next shell to print.
+  const checked = await run(install.cli, ['version', '--check', '--quiet'], env);
+  assert.equal(checked.code, 0, checked.stderr);
+  assert.equal(checked.stdout, '', '--quiet must stay quiet');
+
+  const notice = fs.readFileSync(noticePath, 'utf8');
+  assert.match(notice, new RegExp(`Update available: ${packageVersion} . 99\\.0\\.0`));
+  assert.match(notice, /Run: linchpin update/);
+
+  // No ANSI: the process that writes this is detached with its stdio ignored,
+  // so it has no terminal to detect colour support against, and the shell that
+  // eventually cats it may be redirecting anywhere.
+  assert.doesNotMatch(notice, new RegExp(String.fromCharCode(27)));
+
+  // An answer of "you are current" takes the notice down, so a shell stops
+  // announcing a release the moment it stops being one.
+  const current = await startRegistry(packageVersion);
+  t.after(() => current.close());
+
+  const uptodate = await run(install.cli, ['version', '--check', '--quiet'], {
+    ...env,
+    LINCHPIN_REGISTRY: current.url,
+  });
+  assert.equal(uptodate.code, 0, uptodate.stderr);
+  assert.equal(fs.existsSync(noticePath), false, 'an up-to-date answer clears the notice');
+});
+
+test('a source checkout neither writes nor clears the shared notice', async (t) => {
+  const registry = await startRegistry('99.0.0');
+  t.after(() => registry.close());
+
+  const cacheDir = tempDir('linchpin-cache-');
+  const noticePath = path.join(cacheDir, 'update-notice.txt');
+  fs.writeFileSync(noticePath, 'Update available: written by the global install\n', 'utf8');
+
+  // DIST_CLI is a checkout, not an install: `detectInstallation` finds no
+  // node_modules and reports `source`. Wiping the file from here would silence
+  // a release for every shell on the machine, over a working tree that has
+  // nothing to do with the installed copy.
+  const result = await run(DIST_CLI, ['version', '--check', '--quiet'], {
+    LINCHPIN_REGISTRY: registry.url,
+    LINCHPIN_CACHE_DIR: cacheDir,
+  });
+
+  assert.equal(result.code, 0, result.stderr);
+  assert.match(fs.readFileSync(noticePath, 'utf8'), /written by the global install/);
+});
+
+test('an unchanged notice is not rewritten under a shell that may be reading it', () => {
+  const { writeUpdateNotice, readUpdateNotice, clearUpdateNotice } = lib;
+  const noticePath = path.join(tempDir('linchpin-cache-'), 'update-notice.txt');
+
+  assert.equal(readUpdateNotice(noticePath), undefined, 'absent means nothing to say');
+
+  assert.equal(writeUpdateNotice('Update available: 1.0.0 to 2.0.0', noticePath), true);
+  assert.equal(readUpdateNotice(noticePath), 'Update available: 1.0.0 to 2.0.0\n');
+
+  // Called after every human command, so a rewrite that changes nothing must
+  // not churn a file a shell may be reading.
+  const before = fs.statSync(noticePath).mtimeMs;
+  writeUpdateNotice('Update available: 1.0.0 to 2.0.0\n', noticePath);
+  assert.equal(fs.statSync(noticePath).mtimeMs, before, 'an identical write is skipped');
+
+  assert.equal(clearUpdateNotice(noticePath), true);
+  assert.equal(clearUpdateNotice(noticePath), true, 'clearing an absent notice is not a failure');
+  assert.equal(readUpdateNotice(noticePath), undefined);
+});

@@ -33,7 +33,7 @@ cache flush, or environment fixup around each worktree operation.
 
 | Page | What's in it |
 | --- | --- |
-| [Installing, updating and uninstalling](updating.md) | How version detection works, who sees an update notice, install-method detection, and how to remove it cleanly |
+| [Installing, updating and uninstalling](updating.md) | How version detection works, who sees an update notice after a command and at shell startup, install-method detection, and how to remove it cleanly |
 | [Worktrees and the symlink swap](worktrees.md) | The core mechanic, why symlinks rather than checkouts, and how this differs from plain `git worktree` |
 | [Configuration](configuration.md) | `.linchpin.json` and `.clickup.json` — what each file owns and what is optional |
 | [Hooks](hooks.md) | The 12 hook points, the environment contract, and why hooks are sourced rather than executed |

@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -194,6 +194,65 @@ export function writeUpdateCache(cache: UpdateCache, path: string = updateCacheP
     return true;
   } catch {
     return false;
+  }
+}
+
+/**
+ * Where the pre-rendered shell-startup notice lives.
+ *
+ * A separate file from the cache on purpose. The cache is an answer that still
+ * has to be interpreted — compare two versions, work out the install command —
+ * and doing that at every shell startup would mean starting Node before the
+ * first prompt. This file holds the finished text, so the shell snippet emitted
+ * by `linchpin shell-init --notify` is a `test` and a `cat`.
+ */
+export function updateNoticePath(): string {
+  return join(cacheDirectory(), 'update-notice.txt');
+}
+
+/**
+ * Write the notice a shell should print, skipping the write when it would not
+ * change the file.
+ *
+ * Deliberately plain text, with no ANSI: the process that writes it is detached
+ * with its stdio ignored, so it has no terminal to detect colour support
+ * against, and the shell that eventually `cat`s it may be redirecting anywhere.
+ */
+export function writeUpdateNotice(text: string, path: string = updateNoticePath()): boolean {
+  const content = text.endsWith('\n') ? text : `${text}\n`;
+
+  try {
+    if (readFileSync(path, 'utf8') === content) return true;
+  } catch {
+    // No readable file yet, which is the normal first-write case.
+  }
+
+  try {
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, content, 'utf8');
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Remove the notice. Absence is the "nothing to say" state, so this is a no-op when it is gone. */
+export function clearUpdateNotice(path: string = updateNoticePath()): boolean {
+  try {
+    rmSync(path, { force: true });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** The notice text a shell would print right now, or undefined when there is none. */
+export function readUpdateNotice(path: string = updateNoticePath()): string | undefined {
+  try {
+    const text = readFileSync(path, 'utf8');
+    return text.trim() === '' ? undefined : text;
+  } catch {
+    return undefined;
   }
 }
 

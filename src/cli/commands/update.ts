@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import { runCommand } from '../../core/exec.js';
 import {
+  clearUpdateNotice,
   detectInstallation,
   formatCommand,
   resolveUpdateStatus,
@@ -9,6 +10,7 @@ import {
 } from '../../core/update.js';
 import { EXIT_CODES, UserError } from '../errors.js';
 import { defineCommand } from '../registry.js';
+import { syncNoticeFile } from '../update-notifier.js';
 
 /**
  * `linchpin update` — install the newest published version.
@@ -73,6 +75,11 @@ export const updateCommand = defineCommand({
     }
 
     const latest = status.latest;
+
+    // Before any of the early returns below: --check and --dry-run are both
+    // legitimate ways to learn a release exists, and a shell should say the same.
+    syncNoticeFile({ current: version, latest, installation });
+
     const updateCommand = installation.command;
     const rendered = updateCommand ? formatCommand(updateCommand) : null;
 
@@ -143,8 +150,10 @@ export const updateCommand = defineCommand({
     }
 
     // Reset the check window so the notifier does not repeat a notice that has
-    // just been acted on.
+    // just been acted on, and take down the shell-startup notice with it —
+    // otherwise every new terminal keeps advertising an update already installed.
     writeUpdateCache({ checkedAt: Date.now(), latest, current: latest });
+    clearUpdateNotice();
 
     output.result(
       'update',

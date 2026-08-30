@@ -1,9 +1,11 @@
 import { spawn } from 'node:child_process';
 
 import {
+  clearUpdateNotice,
   isCacheFresh,
   isUpdateAvailable,
   readUpdateCache,
+  writeUpdateNotice,
   type Installation,
 } from '../core/update.js';
 import { isAgent, isCI } from './interactive.js';
@@ -60,6 +62,39 @@ export function renderUpdateNotice(
 }
 
 /**
+ * Keep the pre-rendered shell-startup notice in step with what we now know.
+ *
+ * Cheap enough to call after every command: `writeUpdateNotice` skips a write
+ * that would not change the file, so the steady state is one small read.
+ *
+ * A copy that cannot update itself — a source checkout, an `npx` run — neither
+ * writes nor clears. It has no standing to speak: the notice on this machine
+ * was written by the global install, and a `npm link`ed working tree wiping it
+ * would silence a release for a shell that had nothing to do with the checkout.
+ */
+export function syncNoticeFile(options: {
+  readonly current: string;
+  readonly latest: string | undefined;
+  readonly installation: Installation;
+}): void {
+  try {
+    if (options.installation.command === undefined) return;
+
+    if (!isUpdateAvailable(options.current, options.latest)) {
+      clearUpdateNotice();
+      return;
+    }
+
+    writeUpdateNotice(
+      // Non-null: isUpdateAvailable is false for an absent latest.
+      renderUpdateNotice(options.current, options.latest ?? '', options.installation)
+    );
+  } catch {
+    // The notice is a convenience. Never let it affect the command that ran.
+  }
+}
+
+/**
  * Refresh the cache in a process that outlives this one.
  *
  * `detached` plus `unref()` plus ignored stdio is what keeps a piped caller from
@@ -108,6 +143,15 @@ export function notifyAboutUpdates(
     // Non-null: isUpdateAvailable is false for an absent latest.
     output.warn(renderUpdateNotice(options.current, cache?.latest ?? '', options.installation));
   }
+
+  // Keeps the shell-startup notice honest for someone who updated with their
+  // package manager directly: the next command they run clears the file, rather
+  // than every new shell repeating a notice until the cache next refreshes.
+  syncNoticeFile({
+    current: options.current,
+    latest: cache?.latest,
+    installation: options.installation,
+  });
 
   if (!isCacheFresh(cache)) spawnBackgroundCheck(options.entryPath);
 }
