@@ -165,6 +165,7 @@ export {
   isUpdateAvailable,
   readUpdateCache,
   resolveUpdateStatus,
+  safeRemoteText,
   updateCachePath,
   writeUpdateCache,
   type InstallScope,

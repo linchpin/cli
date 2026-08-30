@@ -208,6 +208,38 @@ export function isCacheFresh(
   return age >= 0 && age < maxAgeMs;
 }
 
+/** Loopback hosts, where plaintext is a local mirror rather than a downgrade. */
+const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]', '::1']);
+
+/**
+ * Strip control characters from text the registry chose.
+ *
+ * `statusText` and a dist-tag are remote strings that reach a terminal. Left
+ * raw, an ANSI escape in either one rewrites the surrounding output — the
+ * update notice is a natural place to forge a line the user trusts. Printable
+ * characters only, and a length cap so a megabyte of "version" cannot scroll a
+ * warning off the screen.
+ */
+export function safeRemoteText(value: string, maxLength = 96): string {
+  // eslint-disable-next-line no-control-regex
+  const stripped = value.replace(/[\u0000-\u001f\u007f-\u009f]/g, '');
+  return stripped.length > maxLength ? `${stripped.slice(0, maxLength)}…` : stripped;
+}
+
+/**
+ * The registry to ask, having refused the ones that cannot be trusted.
+ *
+ * ⚠️ `LINCHPIN_REGISTRY` and `npm_config_registry` are environment values, so
+ * they are exactly as trustworthy as whatever set them — a `.envrc`, a CI
+ * config, a compromised shell profile. A plaintext registry is a downgrade
+ * anyone on the path can answer, so http is refused unless the host is
+ * loopback (a local mirror such as Verdaccio) or the caller has said out loud
+ * that it wants the insecure one.
+ *
+ * An unparseable value falls back to the default rather than throwing: it also
+ * covers `LINCHPIN_REGISTRY=''`, which previously produced a relative URL and
+ * a confusing fetch failure.
+ */
 function registryBase(override?: string): string {
   const candidate =
     override ??
@@ -215,7 +247,29 @@ function registryBase(override?: string): string {
     process.env.npm_config_registry?.trim() ??
     REGISTRY_URL;
 
-  return candidate.replace(/\/+$/, '');
+  const trimmed = candidate.replace(/\/+$/, '');
+  if (trimmed === '') return REGISTRY_URL;
+
+  let parsed: URL;
+  try {
+    parsed = new URL(trimmed);
+  } catch {
+    return REGISTRY_URL;
+  }
+
+  if (parsed.protocol === 'https:') return trimmed;
+
+  const allowInsecure = process.env.LINCHPIN_REGISTRY_ALLOW_INSECURE?.trim();
+  const permitted =
+    LOOPBACK_HOSTS.has(parsed.hostname) ||
+    (allowInsecure !== undefined && allowInsecure !== '' && allowInsecure !== '0');
+
+  if (parsed.protocol === 'http:' && permitted) return trimmed;
+
+  throw new Error(
+    `Refusing to query registry over ${parsed.protocol}//: ${trimmed}. ` +
+      `Use https, or set LINCHPIN_REGISTRY_ALLOW_INSECURE=1 to accept it.`
+  );
 }
 
 /**
@@ -240,7 +294,7 @@ export async function fetchLatestVersion(options: {
 
   if (!response.ok) {
     throw new Error(
-      `${options.packageName}: registry answered ${String(response.status)} ${response.statusText}`
+      `${options.packageName}: registry answered ${String(response.status)} ${safeRemoteText(response.statusText)}`
     );
   }
 
@@ -255,7 +309,10 @@ export async function fetchLatestVersion(options: {
     throw new Error(`${options.packageName}: registry response has no "latest" dist-tag`);
   }
 
-  return body.latest;
+  // Sanitized at the boundary rather than at each print site: `latest` is
+  // cached to disk and read back by later runs, so cleaning it here is what
+  // keeps a hostile answer from outliving the request that fetched it.
+  return safeRemoteText(body.latest);
 }
 
 /**
