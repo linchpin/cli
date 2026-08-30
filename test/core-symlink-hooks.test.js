@@ -16,6 +16,20 @@ function tempDir(label) {
   return fs.mkdtempSync(path.join(os.tmpdir(), `linchpin-${label}-`));
 }
 
+// Hooks are committed files and now run only once this machine has approved
+// their contents, so a test that wants one to fire says so first — the same
+// grant `linchpin wt trust` records.
+function writeTrustedHook(root, name, contents) {
+  const hooksDir = path.join(root, '.linchpin', 'hooks');
+  fs.mkdirSync(hooksDir, { recursive: true });
+
+  const hookFile = path.join(hooksDir, name);
+  fs.writeFileSync(hookFile, contents, 'utf8');
+  lib.trustHook(hookFile);
+
+  return hookFile;
+}
+
 // --- ensurePluginLink -------------------------------------------------------
 
 test('ensurePluginLink creates, is idempotent, and repoints', () => {
@@ -84,9 +98,10 @@ test('a broken symlink pointing at the intended source is still "already linked"
 test('refuses to clobber a real directory without force', () => {
   const root = tempDir('clobber');
   const source = path.join(root, 'wt');
-  const target = path.join(root, 'real-folder');
+  // A real WordPress slot, because --force is only authority over one of those.
+  const target = path.join(root, 'wp-content', 'plugins', 'fixture');
   fs.mkdirSync(source);
-  fs.mkdirSync(target);
+  fs.mkdirSync(target, { recursive: true });
   fs.writeFileSync(path.join(target, 'important.txt'), 'do not lose me');
 
   assert.throws(
@@ -98,6 +113,37 @@ test('refuses to clobber a real directory without force', () => {
   const forced = lib.ensurePluginLink({ sourcePath: source, targetPath: target, force: true });
   assert.equal(forced.changed, true);
   assert.equal(fs.realpathSync(target), fs.realpathSync(source));
+});
+
+test('--force is not authority to delete a path outside a WordPress install', () => {
+  const root = tempDir('outside');
+  const source = path.join(root, 'wt');
+  // The shape a committed .linchpin.json could otherwise point --force at.
+  const target = path.join(root, 'precious');
+  fs.mkdirSync(source);
+  fs.mkdirSync(target);
+  fs.writeFileSync(path.join(target, 'important.txt'), 'irreplaceable');
+
+  assert.throws(
+    () => lib.ensurePluginLink({ sourcePath: source, targetPath: target, force: true }),
+    /not inside a WordPress content directory/
+  );
+  assert.equal(
+    fs.readFileSync(path.join(target, 'important.txt'), 'utf8'),
+    'irreplaceable',
+    'data was destroyed despite the refusal'
+  );
+});
+
+test('isWordPressContentTarget recognises the slots wt switch builds', () => {
+  assert.equal(lib.isWordPressContentTarget('/srv/site/wp-content/plugins/acme'), true);
+  assert.equal(lib.isWordPressContentTarget('/srv/site/wp-content/themes/acme'), true);
+  assert.equal(lib.isWordPressContentTarget('/srv/site/wp-content'), true);
+  assert.equal(lib.isWordPressContentTarget('/srv/site/public/plugins/acme'), true);
+
+  assert.equal(lib.isWordPressContentTarget('/Users/someone'), false);
+  assert.equal(lib.isWordPressContentTarget('/Users/someone/Documents'), false);
+  assert.equal(lib.isWordPressContentTarget('/'), false);
 });
 
 test('dry run reports without touching the filesystem', () => {
@@ -238,13 +284,11 @@ test('hooks are SOURCED, not executed — no shebang or execute bit needed', () 
   // Sourcing is what lets a hook export variables and define functions for the
   // caller. It also means most people's hooks (no shebang, not chmod +x) work.
   const root = tempDir('hooksource');
-  const hooksDir = path.join(root, '.linchpin', 'hooks');
   const outFile = path.join(root, 'proof.txt');
-  fs.mkdirSync(hooksDir, { recursive: true });
 
-  fs.writeFileSync(path.join(hooksDir, 'post-switch'), `echo sourced > "${outFile}"\n`);
+  const hookFile = writeTrustedHook(root, 'post-switch', `echo sourced > "${outFile}"\n`);
   // Deliberately not executable and with no shebang.
-  fs.chmodSync(path.join(hooksDir, 'post-switch'), 0o644);
+  fs.chmodSync(hookFile, 0o644);
 
   const result = lib.runHook(root, 'post-switch');
 
@@ -256,12 +300,11 @@ test('the hook environment contract is honored', () => {
   // These names are a documented public API — someone's post-switch depends on
   // them, so renaming one is a breaking change.
   const root = tempDir('hookenv');
-  const hooksDir = path.join(root, '.linchpin', 'hooks');
   const outFile = path.join(root, 'env.txt');
-  fs.mkdirSync(hooksDir, { recursive: true });
 
-  fs.writeFileSync(
-    path.join(hooksDir, 'post-mv'),
+  writeTrustedHook(
+    root,
+    'post-mv',
     `printf '%s|%s|%s|%s|%s' ` +
       `"$LINCHPIN_WORKTREE" "$LINCHPIN_BRANCH" "$LINCHPIN_ENVIRONMENT" ` +
       `"$LINCHPIN_OLD_BRANCH" "$LINCHPIN_OLD_WORKTREE" > "${outFile}"\n`
@@ -293,13 +336,11 @@ test('unset hook variables are absent rather than the string "undefined"', () =>
 
 test('post-switch runs with cwd set to the new worktree', () => {
   const root = tempDir('hookcwd');
-  const hooksDir = path.join(root, '.linchpin', 'hooks');
   const worktree = path.join(root, 'the-worktree');
   const outFile = path.join(root, 'cwd.txt');
-  fs.mkdirSync(hooksDir, { recursive: true });
   fs.mkdirSync(worktree);
 
-  fs.writeFileSync(path.join(hooksDir, 'post-switch'), `pwd > "${outFile}"\n`);
+  writeTrustedHook(root, 'post-switch', `pwd > "${outFile}"\n`);
 
   lib.runHook(root, 'post-switch', {}, { cwd: worktree });
 
@@ -317,12 +358,9 @@ test('a missing hook is a silent no-op', () => {
 test('a hook path containing spaces and metacharacters stays data', () => {
   // The hook path is passed as $1, never interpolated into the script string.
   const root = tempDir('hookodd');
-  const hooksDir = path.join(root, 'weird dir; touch /tmp/linchpin-hook-pwned', '.linchpin', 'hooks');
   const outFile = path.join(root, 'ok.txt');
-  fs.mkdirSync(hooksDir, { recursive: true });
-  fs.writeFileSync(path.join(hooksDir, 'post-get'), `echo fine > "${outFile}"\n`);
-
   const base = path.join(root, 'weird dir; touch /tmp/linchpin-hook-pwned');
+  writeTrustedHook(base, 'post-get', `echo fine > "${outFile}"\n`);
   const result = lib.runHook(base, 'post-get');
 
   assert.equal(result.ran, true);

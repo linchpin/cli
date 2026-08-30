@@ -18,7 +18,17 @@ const {
   writeDefaultConfig
 } = require('../lib/config');
 const { ensurePluginLink, readExistingTarget } = require('../lib/symlink');
-const { findHookFile, runHook } = require('../lib/hooks');
+const { findHookFile, runHook: runHookRaw } = require('../lib/hooks');
+const {
+  describeUntrustedHook,
+  hashHookFile,
+  isHookTrusted,
+  readTrustStore,
+  revokeHook,
+  trustFilePath,
+  trustHook
+} = require('../lib/trust');
+const { requireContained } = require('../lib/paths');
 
 /** Environment types: base path getters for config init. */
 const ENV_TYPE_BASES = Object.freeze({
@@ -108,6 +118,29 @@ function buildTargetPath(envType, site, contentDir, slug, wpEnvBase, linkName) {
   return '';
 }
 
+/**
+ * Run a hook and say so.
+ *
+ * Every lifecycle call goes through here rather than through the raw runner, so
+ * two things are always true: a blocked hook explains itself and the command
+ * carries on, and a hook that *does* run names itself first. Sourcing a file
+ * from the repo is never silent in either direction.
+ *
+ * Both lines go to stderr — stdout carries the worktree path that
+ * `cd "$(linchpin wt switch)"` consumes.
+ */
+function runHook(basePath, hookName, env, options) {
+  const result = runHookRaw(basePath, hookName, env, options);
+
+  if (result.blocked) {
+    process.stderr.write(`${result.reason}\n`);
+  } else if (result.ran) {
+    process.stderr.write(`Ran hook: ${result.hookFile}\n`);
+  }
+
+  return result;
+}
+
 function runWt(argv, options = {}) {
   const cwd = options.cwd || process.cwd();
   const command = argv[0] || 'help';
@@ -144,6 +177,8 @@ function runWt(argv, options = {}) {
       return commandLink(cwd, argv.slice(1));
     case 'invoke':
       return commandInvoke(cwd, argv.slice(1));
+    case 'trust':
+      return commandTrust(cwd, argv.slice(1));
     case 'config':
       return commandConfig(cwd, argv.slice(1));
     case 'help':
@@ -255,6 +290,36 @@ async function commandSwitch(cwd, argv) {
     LINCHPIN_BRANCH: selected.branch || 'detached',
     LINCHPIN_ENVIRONMENT: environmentName
   };
+
+  // A --force that replaces a real directory is the one destructive thing this
+  // command does, and the path it deletes comes from the committed config. Ask
+  // before doing it, and refuse rather than assume consent when there is no one
+  // to ask. `--yes` is the explicit, scriptable answer.
+  if (options.force && !options.dryRun) {
+    const existingTarget = readExistingTarget(targetPath);
+
+    if (existingTarget.exists && !existingTarget.isSymlink) {
+      if (!options.yes) {
+        if (!process.stdin.isTTY) {
+          throw new Error(
+            `Refusing to replace ${targetPath} without confirmation. ` +
+              `Re-run with --yes if you intend to delete it.`
+          );
+        }
+
+        const { confirm } = await import('@inquirer/prompts');
+        const approved = await confirm({
+          message: `Permanently delete ${targetPath} and replace it with a symlink?`,
+          default: false
+        });
+
+        if (!approved) {
+          process.stderr.write('Cancelled; nothing was changed.\n');
+          return 0;
+        }
+      }
+    }
+  }
 
   if (!options.dryRun) {
     runHook(basePath, 'pre-switch', switchEnv);
@@ -603,8 +668,10 @@ function commandCopy(cwd, argv) {
   assertInLinkedWorktree(cwd, basePath);
 
   const currentPath = getCurrentTopLevel(cwd);
-  const source = path.join(basePath, target);
-  const destination = path.join(currentPath, target);
+  // `target` is argv, and it feeds a recursive copy at both ends. Contained so
+  // `../../..` cannot read outside the base worktree or write outside this one.
+  const source = requireContained(basePath, target, 'the base worktree');
+  const destination = requireContained(currentPath, target, 'the current worktree');
 
   if (!pathExists(source)) {
     throw new Error(`'${target}' does not exist in base worktree.`);
@@ -629,8 +696,10 @@ function commandLink(cwd, argv) {
   assertInLinkedWorktree(cwd, basePath);
 
   const currentPath = getCurrentTopLevel(cwd);
-  const source = path.join(basePath, target);
-  const destination = path.join(currentPath, target);
+  // Same containment as `copy`: this creates a symlink and may unlink whatever
+  // sits at the destination, so neither end may leave its worktree.
+  const source = requireContained(basePath, target, 'the base worktree');
+  const destination = requireContained(currentPath, target, 'the current worktree');
 
   if (!pathExists(source)) {
     throw new Error(`'${target}' does not exist in base worktree.`);
@@ -665,12 +734,95 @@ function commandInvoke(cwd, argv) {
   const hookFile = findHookFile(basePath, hookName);
 
   if (!hookFile) {
+    // Also the answer when the name escaped the hooks directory or resolved
+    // through a symlink out of it — both are "no such hook" from here.
     throw new Error(`Hook '${hookName}' does not exist in .linchpin/hooks.`);
   }
 
-  runHook(basePath, hookName);
+  const result = runHook(basePath, hookName);
+
+  if (result.blocked) {
+    // The wrapper already explained why on stderr; the exit code is what a
+    // script or an agent reads.
+    return 1;
+  }
+
   process.stdout.write(`Ran ${hookFile}\n`);
   return 0;
+}
+
+/**
+ * `linchpin wt trust` — review and approve the hooks this repo ships.
+ *
+ * Approval is recorded against the hook's **contents**, so editing a trusted
+ * hook withdraws its trust automatically and it must be reviewed again.
+ */
+function commandTrust(cwd, argv) {
+  const basePath = getBaseWorktreePath(cwd);
+  const hooksDir = path.join(basePath, '.linchpin', 'hooks');
+  const revoking = argv.includes('--revoke');
+  const all = argv.includes('--all');
+  const name = argv.find((token) => !token.startsWith('-'));
+
+  const present = listRepoHooks(hooksDir);
+
+  if (!name && !all) {
+    if (present.length === 0) {
+      process.stdout.write(`No hooks in ${hooksDir}\n`);
+      return 0;
+    }
+
+    process.stdout.write(`Hooks in ${hooksDir}\n`);
+    for (const hookName of present) {
+      const hookFile = path.join(hooksDir, hookName);
+      const state = isHookTrusted(hookFile) ? 'trusted' : 'UNTRUSTED';
+      process.stdout.write(`  ${state.padEnd(10)} ${hookName}\n`);
+    }
+    process.stdout.write(`\nTrust file: ${trustFilePath()}\n`);
+    return 0;
+  }
+
+  const targets = all ? present : [name];
+
+  if (targets.length === 0) {
+    throw new Error(`No hooks found in ${hooksDir}.`);
+  }
+
+  for (const hookName of targets) {
+    const hookFile = findHookFile(basePath, hookName);
+
+    if (!hookFile) {
+      throw new Error(`Hook '${hookName}' does not exist in .linchpin/hooks.`);
+    }
+
+    if (revoking) {
+      const removed = revokeHook(hookFile);
+      process.stdout.write(`${removed ? 'Revoked' : 'Was not trusted'}: ${hookName}\n`);
+      continue;
+    }
+
+    const digest = trustHook(hookFile);
+    if (!digest) {
+      throw new Error(`Could not record trust for ${hookFile}.`);
+    }
+
+    process.stdout.write(`Trusted ${hookName} (${digest.slice(0, 12)})\n`);
+  }
+
+  return 0;
+}
+
+/** Hook filenames in a repo's hooks directory, sorted. Missing directory is empty. */
+function listRepoHooks(hooksDir) {
+  try {
+    return fs
+      .readdirSync(hooksDir, { withFileTypes: true })
+      .filter((entry) => entry.isFile())
+      .map((entry) => entry.name)
+      .sort();
+  } catch (_error) {
+    return [];
+  }
 }
 
 async function runConfigInitPrompts(basePath, options = {}) {
@@ -1067,6 +1219,7 @@ function parseSwitchArgs(argv) {
   let environment = null;
   let force = false;
   let dryRun = false;
+  let yes = false;
 
   for (let index = 0; index < argv.length; index += 1) {
     const token = argv[index];
@@ -1087,6 +1240,11 @@ function parseSwitchArgs(argv) {
       continue;
     }
 
+    if (token === '--yes' || token === '-y') {
+      yes = true;
+      continue;
+    }
+
     if (token === '--dry-run') {
       dryRun = true;
       continue;
@@ -1104,7 +1262,8 @@ function parseSwitchArgs(argv) {
     ref,
     environment,
     force,
-    dryRun
+    dryRun,
+    yes
   };
 }
 
@@ -1196,7 +1355,7 @@ function printWtHelp() {
   process.stdout.write(`Usage:\n`);
   process.stdout.write(`  linchpin wt ls [--json]\n`);
   process.stdout.write(`  linchpin wt current [--link] [--env <name>]\n`);
-  process.stdout.write(`  linchpin wt switch [worktree|branch] [--env <name>] [--force] [--dry-run]\n`);
+  process.stdout.write(`  linchpin wt switch [worktree|branch] [--env <name>] [--force] [--yes] [--dry-run]\n`);
   process.stdout.write(`  linchpin wt new [name]\n`);
   process.stdout.write(`  linchpin wt get <branch>\n`);
   process.stdout.write(`  linchpin wt extract\n`);
@@ -1209,6 +1368,7 @@ function printWtHelp() {
   process.stdout.write(`  linchpin wt copy <path>\n`);
   process.stdout.write(`  linchpin wt link <path>\n`);
   process.stdout.write(`  linchpin wt invoke <hook>\n`);
+  process.stdout.write(`  linchpin wt trust [<hook>|--all] [--revoke]\n`);
   process.stdout.write(`  linchpin wt config init [--plugin-slug <slug>] [--force] [--no-interactive]\n`);
   process.stdout.write(`  linchpin wt config show\n`);
   process.stdout.write(`\n`);

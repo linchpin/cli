@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const { canonicalPath, createFixture, runCli } = require('../test-utils/cli-fixture');
+const { canonicalPath, createFixture, runCli, trustHooks } = require('../test-utils/cli-fixture');
 
 function assertOk(result, message) {
   assert.equal(result.code, 0, `${message}\nSTDERR:\n${result.stderr}`);
@@ -70,6 +70,8 @@ test(
       'echo "post-switch ran"',
       'utf8'
     );
+    // Hooks are committed files: they run only once this machine trusts them.
+    trustHooks(fixture.basePath);
 
     const invoke = runCli(fixture.basePath, ['wt', 'invoke', 'post-switch']);
     assertOk(invoke, 'linchpin wt invoke post-switch should succeed');

@@ -105,7 +105,15 @@ export {
 } from './core/config.js';
 
 export {
+  isContained,
+  isContainedAfterLinks,
+  requireContained,
+  resolveContained,
+} from './core/paths.js';
+
+export {
   ensurePluginLink,
+  isWordPressContentTarget,
   readExistingTarget,
   resolveTargetConflict,
   type ConflictOutcome,
@@ -113,6 +121,19 @@ export {
   type EnsureLinkOptions,
   type LinkResult,
 } from './core/symlink.js';
+
+export {
+  EMPTY_TRUST_STORE,
+  describeUntrustedHook,
+  hashHookFile,
+  isHookTrusted,
+  readTrustStore,
+  revokeHook,
+  trustFilePath,
+  trustHook,
+  writeTrustStore,
+  type TrustStore,
+} from './core/trust.js';
 
 export {
   HOOK_OPERATIONS,
