@@ -1,7 +1,8 @@
 # Hooks
 
 Every worktree operation can run a project script before and after it. Put an executable-or-not
-file at `.linchpin/hooks/<name>` and it runs at that point.
+file at `.linchpin/hooks/<name>`, approve it with `linchpin wt trust`, and it runs at that
+point.
 
 ```bash
 # .linchpin/hooks/post-switch
@@ -55,10 +56,41 @@ deliberate:
 The hook path is passed as an argument (`$1`) rather than interpolated into the script, so a
 path containing spaces or shell metacharacters stays data.
 
+## Hooks must be trusted before they run
+
+`.linchpin/hooks/` is committed, so hooks arrive with a `git clone` — unlike `.git/hooks`,
+which git deliberately refuses to transfer for exactly this reason. Combined with sourcing,
+that would make cloning a repository equivalent to running whatever it shipped: no execute bit,
+no shebang, nothing in a diff marking the file as code that will run.
+
+So a hook does nothing until this machine has approved it, the same way `direnv` and `mise`
+handle `.envrc`:
+
+```bash
+linchpin wt trust                      # list this repo's hooks and their state
+linchpin wt trust post-switch          # approve one, after reading it
+linchpin wt trust --all                # approve every hook in the repo
+linchpin wt trust post-switch --revoke # withdraw approval
+```
+
+An untrusted hook is skipped with a message naming the file and the command that would approve
+it. The operation itself still succeeds — a blocked hook is not a failed switch.
+
+**Approval covers the contents, not the filename.** Trust is recorded against a hash of the
+file, so editing a trusted hook withdraws its trust automatically and it has to be reviewed
+again. Pulling a branch that changes a hook you trusted last week does not inherit that trust.
+
+Approvals are per-machine and live outside the repository — at `$XDG_DATA_HOME/linchpin/trust.json`,
+or `~/.local/share/linchpin/trust.json` by default, overridable with `LINCHPIN_TRUST_FILE`. A
+repository cannot grant its own trust.
+
 ## Guardrails
 
 - **A failing hook fails the operation.** That is intentional — a `pre-switch` that cannot
   prepare the environment should stop the switch rather than let it half-happen.
 - **Hooks run with your full environment and privileges.** They are ordinary shell scripts in
-  your repository; review them the way you would review any other code you run.
+  your repository; review them before trusting them, the way you would review any other code
+  you run.
+- **A hook that runs says so.** Each one prints `Ran hook: <path>` to stderr, so sourcing a file
+  from the repo is never silent.
 - **Keep them fast.** A hook on `post-switch` runs every time anyone changes branch.

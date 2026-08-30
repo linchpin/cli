@@ -1,6 +1,7 @@
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const { createHash } = require('node:crypto');
 const { execFileSync, spawnSync } = require('node:child_process');
 
 const BIN_PATH = path.resolve(__dirname, '..', 'dist', 'cli.js');
@@ -9,13 +10,55 @@ const BIN_PATH = path.resolve(__dirname, '..', 'dist', 'cli.js');
 // repo. The update notifier is switched off for a different reason: a suite that
 // reaches the npm registry fails offline, and its stderr notice would show up in
 // tests asserting on stderr. `test/update.test.js` opts back in deliberately.
+
+// Per-process so parallel test *files* cannot race on one trust store. Hooks
+// are committed files that only run once trusted, so a fixture that wants its
+// hooks to fire says so through `trustHooks`.
+const TRUST_FILE = path.join(os.tmpdir(), `linchpin-test-trust-${process.pid}.json`);
+
 const CLEAN_ENV = {
   ...Object.fromEntries(
     Object.entries(process.env).filter(([key]) => !key.startsWith('GIT_'))
   ),
   LINCHPIN_NO_UPDATE_NOTIFIER: '1',
-  LINCHPIN_CACHE_DIR: path.join(os.tmpdir(), 'linchpin-test-cache')
+  LINCHPIN_CACHE_DIR: path.join(os.tmpdir(), 'linchpin-test-cache'),
+  LINCHPIN_TRUST_FILE: TRUST_FILE
 };
+
+/**
+ * Approve every hook currently in a repo, the way a user would after reading
+ * them. Call it again after writing a new hook — trust follows contents.
+ */
+function trustHooks(basePath) {
+  const hooksDir = path.join(basePath, '.linchpin', 'hooks');
+
+  let store = { hooks: {} };
+  try {
+    store = JSON.parse(fs.readFileSync(TRUST_FILE, 'utf8'));
+  } catch (_error) {
+    store = { hooks: {} };
+  }
+
+  let entries = [];
+  try {
+    entries = fs.readdirSync(hooksDir, { withFileTypes: true });
+  } catch (_error) {
+    return TRUST_FILE;
+  }
+
+  for (const entry of entries) {
+    if (!entry.isFile()) continue;
+    const hookFile = path.join(hooksDir, entry.name);
+    store.hooks[canonicalPath(hookFile)] = createHash('sha256')
+      .update(fs.readFileSync(hookFile))
+      .digest('hex');
+  }
+
+  fs.mkdirSync(path.dirname(TRUST_FILE), { recursive: true });
+  fs.writeFileSync(TRUST_FILE, `${JSON.stringify(store, null, 2)}\n`, 'utf8');
+
+  return TRUST_FILE;
+}
 
 function makeTempDir() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'linchpin-cli-'));
@@ -111,16 +154,20 @@ function createFixture() {
   fs.mkdirSync(path.join(basePath, '.linchpin', 'hooks'), { recursive: true });
   fs.writeFileSync(path.join(basePath, '.linchpin', 'hooks', 'pre-new'), 'echo pre-new hook\n', 'utf8');
 
+  trustHooks(basePath);
+
   return {
     root,
     basePath,
     defaultBranch,
-    pluginPath
+    pluginPath,
+    trustFile: TRUST_FILE
   };
 }
 
 module.exports = {
   canonicalPath,
   createFixture,
-  runCli
+  runCli,
+  trustHooks
 };

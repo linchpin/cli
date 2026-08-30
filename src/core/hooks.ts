@@ -2,6 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { runCommand } from './exec.js';
+import { isContainedAfterLinks, resolveContained } from './paths.js';
+import { describeUntrustedHook, isHookTrusted } from './trust.js';
 
 /** Operations that can carry hooks. */
 export const HOOK_OPERATIONS = ['switch', 'new', 'get', 'extract', 'mv', 'del'] as const;
@@ -46,11 +48,31 @@ export interface HookEnvironment {
 export interface HookResult {
   readonly ran: boolean;
   readonly hookFile: string | null;
+  /** True when a hook was found but this machine has not approved its contents. */
+  readonly blocked?: boolean;
+  /** What to show the user when `blocked` — names the file and the remedy. */
+  readonly reason?: string;
 }
 
-/** Resolve `.linchpin/hooks/<name>`, or null when there is no such hook. */
+/**
+ * Resolve `.linchpin/hooks/<name>`, or null when there is no such hook.
+ *
+ * ⚠️ `hookName` reaches here straight from argv via `wt invoke`, and this
+ * function's answer is **sourced as bash**. A plain `path.join` let
+ * `../../../payload` normalize its way clear of the repo and run any file on
+ * the machine, so the join is contained; a symlink pointing out of the hooks
+ * directory is refused too, since git tracks symlinks and a cloned repo can
+ * plant one aimed anywhere.
+ *
+ * Returning null rather than throwing keeps the 12 lifecycle points quiet when
+ * a repo simply has no hook; `wt invoke` reports the miss itself.
+ */
 export function findHookFile(basePath: string, hookName: string): string | null {
-  const hookFile = path.join(basePath, '.linchpin', 'hooks', hookName);
+  const hooksRoot = path.join(basePath, '.linchpin', 'hooks');
+  const hookFile = resolveContained(hooksRoot, hookName);
+
+  if (hookFile === null) return null;
+  if (!isContainedAfterLinks(hooksRoot, hookFile)) return null;
 
   try {
     if (fs.statSync(hookFile).isFile()) return hookFile;
@@ -83,6 +105,14 @@ export function runHook(
   const hookFile = findHookFile(basePath, hookName);
 
   if (!hookFile) return { ran: false, hookFile: null };
+
+  // ⚠️ Fail closed. A committed hook is code that arrived with a clone, so it
+  // runs only once this machine has approved these exact bytes — see trust.ts.
+  // Returning rather than throwing keeps a blocked hook from failing the
+  // command around it; the caller reports the reason.
+  if (!isHookTrusted(hookFile)) {
+    return { ran: false, hookFile, blocked: true, reason: describeUntrustedHook(hookFile) };
+  }
 
   runCommand('bash', ['-c', 'source "$1"', 'linchpin-hook', hookFile], {
     env: { ...process.env, ...env },

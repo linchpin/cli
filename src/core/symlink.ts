@@ -1,6 +1,32 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+/**
+ * Does this path look like a slot a WordPress install actually owns?
+ *
+ * ⚠️ This is the guard on a recursive delete whose target comes from
+ * `.linchpin.json` — a **committed** file, so a cloned repo chooses it. Without
+ * a check, `wt switch --force` would remove any absolute path a repository
+ * cared to name.
+ *
+ * The test mirrors how `buildTargetPath` composes these paths in the first
+ * place: something under a `wp-content` directory, or a directory that is one.
+ * A deliberately loose fit — someone's install can live anywhere — but it does
+ * rule out a home directory, a source tree, or a volume root, which is the
+ * class of mistake worth refusing.
+ */
+export function isWordPressContentTarget(targetPath: string): boolean {
+  const segments = path.resolve(targetPath).split(path.sep).filter(Boolean);
+  if (segments.length === 0) return false;
+
+  if (segments.includes('wp-content')) return true;
+
+  // A `wp-content` repo may be linked in under its own name, in which case the
+  // parent is the WordPress root and holds the usual siblings.
+  const parent = segments[segments.length - 2];
+  return parent === 'plugins' || parent === 'themes' || parent === 'mu-plugins';
+}
+
 export interface ExistingTarget {
   readonly exists: boolean;
   readonly isSymlink: boolean;
@@ -67,6 +93,17 @@ export function ensurePluginLink({
     if (!force) {
       throw new Error(
         `Target exists and is not a symlink: ${resolvedTarget}. Re-run with --force to replace it.`
+      );
+    }
+
+    // `--force` authorises replacing a WordPress content slot. It is not
+    // authority to delete an arbitrary path, and the path came from a file the
+    // repository controls, so the shape of the target is checked before the
+    // recursive remove rather than after.
+    if (!isWordPressContentTarget(resolvedTarget)) {
+      throw new Error(
+        `Refusing to delete ${resolvedTarget}: it is not inside a WordPress content directory. ` +
+          `Check wordpress.environments in .linchpin.json.`
       );
     }
 

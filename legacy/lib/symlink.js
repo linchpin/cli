@@ -1,6 +1,26 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
+/**
+ * Does this path look like a slot a WordPress install actually owns?
+ *
+ * Guards the recursive delete below, whose target comes from the committed
+ * .linchpin.json — see src/core/symlink.ts for the full reasoning.
+ */
+function isWordPressContentTarget(targetPath) {
+  const segments = path.resolve(targetPath).split(path.sep).filter(Boolean);
+  if (segments.length === 0) {
+    return false;
+  }
+
+  if (segments.includes('wp-content')) {
+    return true;
+  }
+
+  const parent = segments[segments.length - 2];
+  return parent === 'plugins' || parent === 'themes' || parent === 'mu-plugins';
+}
+
 function ensurePluginLink({ sourcePath, targetPath, force = false, dryRun = false }) {
   const resolvedSource = path.resolve(sourcePath);
   const resolvedTarget = path.resolve(targetPath);
@@ -47,6 +67,15 @@ function ensurePluginLink({ sourcePath, targetPath, force = false, dryRun = fals
     if (!force) {
       throw new Error(
         `Target exists and is not a symlink: ${resolvedTarget}. Re-run with --force to replace it.`
+      );
+    }
+
+    // --force authorises replacing a WordPress content slot, not deleting an
+    // arbitrary path a cloned repo happened to name.
+    if (!isWordPressContentTarget(resolvedTarget)) {
+      throw new Error(
+        `Refusing to delete ${resolvedTarget}: it is not inside a WordPress content directory. ` +
+          `Check wordpress.environments in .linchpin.json.`
       );
     }
 
@@ -137,5 +166,6 @@ function safeReadlinkResolved(linkPath) {
 
 module.exports = {
   ensurePluginLink,
+  isWordPressContentTarget,
   readExistingTarget
 };
