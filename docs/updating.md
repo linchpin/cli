@@ -15,8 +15,9 @@ Global, not a project dependency: it is a tool you point at many repositories.
 
 `linchpin shell-init` emits a shell function that re-enters your current directory after a
 successful `wt switch`, because a child process cannot change its parent shell's directory. Add
-`eval "$(linchpin shell-init)"` to your profile, or wrap each call as
-`cd "$(linchpin wt switch …)"`.
+`eval "$(linchpin shell-init --notify)"` to your profile, or wrap each call as
+`cd "$(linchpin wt switch …)"`. `--notify` adds the [shell-startup
+notice](#the-shell-startup-notice).
 
 ## Two ways to ask about the version
 
@@ -41,7 +42,9 @@ then npmjs.org.
 
 **The answer is cached for 24 hours**, at `$XDG_CACHE_HOME/linchpin/update-check.json` or
 `~/.cache/linchpin/update-check.json` (`LINCHPIN_CACHE_DIR` overrides, and
-`linchpin version --json` reports the resolved path as `cachePath`).
+`linchpin version --json` reports the resolved path as `cachePath`). Beside it sits
+`update-notice.txt`, the finished text a shell should print — see below for why it is a second
+file rather than a second read of the first.
 
 **A notice costs no latency.** The notifier reads the cache file and nothing else. If the cache
 has gone stale it spawns a detached process to refresh it — `detached`, stdio ignored,
@@ -55,10 +58,13 @@ read-only home directory or a truncated file must never break the command someon
 not a semver, the comparison returns "equal" rather than "newer" — otherwise every invocation
 would nag with no version that could ever satisfy it.
 
-## Who gets told
+## Who gets told, after a command
 
-The notice is written to **stderr**, after the command completes, and only when all of these
-hold:
+There are two surfaces. This section is the notice printed after a command you ran; the next one
+is the notice printed when a shell starts. Both write to **stderr**, and both honour the same
+opt-out.
+
+The in-command notice is written after the command completes, and only when all of these hold:
 
 | Condition | Why |
 | --- | --- |
@@ -71,6 +77,59 @@ hold:
 
 stderr rather than stdout is load-bearing, not stylistic: `cd "$(linchpin wt switch)"` and
 `eval "$(linchpin shell-init)"` both consume stdout, and a notice there would be executed.
+
+## The shell-startup notice
+
+The notifier above only speaks after someone runs a command, which means it never reaches the
+person most likely to be out of date: the one who has not opened the CLI in a fortnight.
+`linchpin shell-init --notify` emits a second block for a shell profile, so a release is
+announced by opening a terminal.
+
+```bash
+linchpin shell-init --notify >> ~/.zshrc     # or eval "$(linchpin shell-init --notify)"
+```
+
+Nothing in it is terminal-specific. Ghostty, Terminal.app, iTerm, VS Code and the terminal
+inside Herd all start the user's shell, and the shell is what reads this.
+
+**No Node on the startup path.** This is why `update-notice.txt` exists as its own file. The
+cache is an *answer* that still has to be interpreted — compare two versions by semver
+precedence, work out which package manager installed this copy — and doing that at startup means
+starting Node in front of the first prompt: ~35ms, several times a day, to print nothing on all
+but a handful of shells. The notice file holds the finished two lines instead, so the common
+path is a `test` and a `cat`, measured at about 6ms per shell.
+
+**Only the CLI writes it.** Every `linchpin version` and `linchpin update` syncs the file to
+what it just learned, so it is written when a release appears and removed the moment it stops
+being one. `linchpin update` clears it on success, and any human command clears it after a
+manual `npm install -g` — otherwise every new terminal would keep advertising an update that was
+already installed. An identical write is skipped rather than performed, so a file a shell may be
+reading is not churned on every command.
+
+**A copy that cannot update itself stays out of it.** A source checkout or an `npx` run neither
+writes nor clears: the notice on that machine belongs to the global install, and an `npm link`ed
+working tree wiping it would silence a release for shells that have nothing to do with the
+checkout.
+
+**The refresh is the shell's job when nothing else runs the CLI.** If `update-check.json` is
+missing or more than a day old, the block spawns `linchpin version --check --quiet` detached,
+with its stdio on `/dev/null`, and returns immediately. That is what keeps a machine that never
+runs the CLI from going stale forever.
+
+The block declines to say anything when any of these hold:
+
+| Condition | Why |
+| --- | --- |
+| The shell is not interactive | A script that sources a profile is not a person. `case $- in *i*)` in POSIX shells, `status is-interactive` in fish |
+| `LINCHPIN_NO_UPDATE_NOTIFIER` / `NO_UPDATE_NOTIFIER` is set | The same opt-out the in-command notifier uses, read the same way: `0` and `false` count as unset |
+| `linchpin` is not on `PATH` | Uninstalled. Advice that cannot be taken, and nothing to spawn |
+| `update-notice.txt` is absent | The "nothing to say" state |
+
+The cache directory is baked into the emitted block as a shell literal — single-quoted, with
+embedded apostrophes escaped, since it is a path from `$HOME` going into a file that is sourced
+without review. Resolving XDG in shell would be a second implementation of `cacheDirectory()`
+free to drift from the first. A `LINCHPIN_CACHE_DIR` set at runtime still wins; move your cache
+any other way and re-run `shell-init`.
 
 ## Install-method detection
 
@@ -97,10 +156,12 @@ copies on the machine, and which one answers depends on `PATH` order.
 
 ```bash
 npm uninstall -g @linchpinagency/cli     # or pnpm remove -g / bun remove -g
-rm -rf ~/.cache/linchpin                 # the update-check cache
+rm -rf ~/.cache/linchpin                 # the update-check cache and the notice file
 ```
 
-Then remove the `eval "$(linchpin shell-init)"` line from your shell profile.
+Then remove the `eval "$(linchpin shell-init --notify)"` line from your shell profile. Left
+behind, the notice block is harmless — it checks for `linchpin` on `PATH` and returns — but the
+`eval` around it will report `command not found` on every new shell.
 
 `.linchpin.json` and `.linchpin/hooks/` stay: they are committed project files that a teammate
 still needs. Worktrees and symlinks stay too — they are plain git worktrees and plain symlinks,

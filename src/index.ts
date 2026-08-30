@@ -134,6 +134,7 @@ export {
   FETCH_TIMEOUT_MS,
   REGISTRY_URL,
   cacheDirectory,
+  clearUpdateNotice,
   compareVersions,
   currentInstallPath,
   detectInstallation,
@@ -143,9 +144,12 @@ export {
   isCacheFresh,
   isUpdateAvailable,
   readUpdateCache,
+  readUpdateNotice,
   resolveUpdateStatus,
   updateCachePath,
+  updateNoticePath,
   writeUpdateCache,
+  writeUpdateNotice,
   type InstallScope,
   type Installation,
   type PackageManager,
@@ -159,4 +163,12 @@ export {
   notificationsAllowed,
   notifyAboutUpdates,
   renderUpdateNotice,
+  syncNoticeFile,
 } from './cli/update-notifier.js';
+
+export {
+  fishNoticeSnippet,
+  noticeSnippet,
+  posixNoticeSnippet,
+  type NoticeSnippetOptions,
+} from './cli/shell-notice.js';

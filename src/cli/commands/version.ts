@@ -8,6 +8,7 @@ import {
   updateCachePath,
 } from '../../core/update.js';
 import { defineCommand } from '../registry.js';
+import { syncNoticeFile } from '../update-notifier.js';
 
 /**
  * `linchpin version` — the installed version, plus whether a newer one exists.
@@ -51,6 +52,10 @@ export const versionCommand = defineCommand({
       refresh: args.check,
       cacheOnly: !args.check,
     });
+
+    // This command is what the background refresh runs, so it is the natural
+    // place to keep the shell-startup notice in step with the registry.
+    syncNoticeFile({ current: version, latest: status.latest, installation });
 
     const updateCommand = installation.command ? formatCommand(installation.command) : null;
 

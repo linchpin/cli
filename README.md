@@ -83,7 +83,7 @@ linchpin <command> --help       # flags, examples and description for one
 | `wt copy <path>` / `wt link <path>` | Copy or symlink a file from the base worktree into this one | write |
 | `wt config init` / `wt config show` | Create or inspect `.linchpin.json` | write / read |
 | `wt invoke <hook>` | Run a lifecycle hook by hand | write |
-| `shell-init` | Emit the shell wrapper that lets `wt switch` change your directory | read |
+| `shell-init` | Emit the shell wrapper that lets `wt switch` change your directory, and with `--notify` the shell-startup update notice | read |
 | `version` | Print the installed version and whether a newer one is published | read |
 | `update` | Install the latest published version | write |
 
@@ -138,13 +138,17 @@ switch` repoints the symlink but leaves your shell sitting in the **old** worktr
 `~/.zshrc`, `~/.bashrc` or `~/.config/fish/config.fish`:
 
 ```bash
-eval "$(linchpin shell-init)"
+eval "$(linchpin shell-init --notify)"
 ```
 
 The shell is detected from `$SHELL`; force one with `linchpin shell-init --shell fish`. If you
 would rather not add anything to your profile, wrap the command instead —
 `cd "$(linchpin wt switch feature/x)"` — which works because path output goes to stdout while
 everything informational goes to stderr.
+
+`--notify` is the second half: it adds a block that tells you at shell startup when a newer
+version has been published. Leave it off with a bare `linchpin shell-init` if you only want the
+directory wrapper. See [Being told about a new version](#being-told-about-a-new-version).
 
 ### Install from source
 
@@ -239,27 +243,46 @@ Guardrails, so a switch can't quietly eat your work:
 
 The CLI knows what version it is and whether a newer one has been published.
 
-### Being told about it
+### Being told about a new version
 
-When a newer version exists, a notice is written to **stderr** after your command completes:
+There are two places a newer version gets announced. Both print the same two lines, both to
+**stderr**, and both are off for machine readers.
+
+**After a command you ran.** Automatic, nothing to install:
 
 ```
 Update available: 1.1.3 → 1.2.0
   Run: linchpin update
 ```
 
-Four things make that notice safe to leave on:
+**When you open a terminal.** Opt in once, by adding `--notify` to the `shell-init` line in your
+profile:
 
-- **It costs nothing.** The version is read from a small cache file, never from the network, so
-  no command waits on a registry round trip. When the cache is more than 24 hours old a detached
-  background process refreshes it and exits; nothing blocks on it.
-- **It never touches stdout.** `cd "$(linchpin wt switch)"` and `eval "$(linchpin shell-init)"`
+```bash
+eval "$(linchpin shell-init --notify)"
+```
+
+The second one exists because the first only reaches people who are already running the CLI —
+the teammate who has not opened it in a fortnight is exactly the one who is out of date and
+never hears about it. It is not tied to any particular terminal: Ghostty, Terminal.app, iTerm,
+VS Code and the terminal inside Herd all just start your shell.
+
+Four things make both safe to leave on:
+
+- **They cost nothing.** The version is read from a small cache file, never from the network, so
+  no command and no shell startup waits on a registry round trip. When the cache is more than 24
+  hours old a detached background process refreshes it and exits; nothing blocks on it. The
+  startup block is a `test` and a `cat` — about 6ms, against ~35ms if it had to start Node.
+- **They never touch stdout.** `cd "$(linchpin wt switch)"` and `eval "$(linchpin shell-init)"`
   keep working, and a `--json` envelope stays the only thing on stdout.
-- **Machine readers never see it.** It is suppressed in `--json` and `--quiet` mode, in CI, and
-  when an agent is driving. An agent that wants the facts asks for them:
+- **Machine readers never see them.** Suppressed in `--json` and `--quiet` mode, in CI, when an
+  agent is driving, and — for the startup block — in any non-interactive shell, so a script that
+  sources your profile stays clean. An agent that wants the facts asks for them:
   `linchpin version --check --json`.
-- **It is one line, and you can turn it off.** Set `LINCHPIN_NO_UPDATE_NOTIFIER=1` (or the
-  conventional `NO_UPDATE_NOTIFIER=1`).
+- **They are two lines, and you can turn them off.** Set `LINCHPIN_NO_UPDATE_NOTIFIER=1` (or the
+  conventional `NO_UPDATE_NOTIFIER=1`); both honour it. The notice disappears on its own once
+  you update, however you update — `linchpin update` clears it, and so does the next command you
+  run after a manual `npm install -g`.
 
 ### Asking directly
 
@@ -329,9 +352,9 @@ linchpin update --check || echo "CLI is behind — releasing with an old toolcha
 
 | Variable | Effect |
 | --- | --- |
-| `LINCHPIN_NO_UPDATE_NOTIFIER` / `NO_UPDATE_NOTIFIER` | Never print the update notice |
+| `LINCHPIN_NO_UPDATE_NOTIFIER` / `NO_UPDATE_NOTIFIER` | Never print the update notice, after a command or at shell startup. `0` and `false` mean *not* set |
 | `LINCHPIN_REGISTRY` | Registry to check, for a mirror or an air-gapped network. Falls back to `npm_config_registry`, then npmjs.org |
-| `LINCHPIN_CACHE_DIR` | Where the update-check cache lives. Defaults to `$XDG_CACHE_HOME/linchpin`, then `~/.cache/linchpin` |
+| `LINCHPIN_CACHE_DIR` | Where the update-check cache and the pre-rendered startup notice live. Defaults to `$XDG_CACHE_HOME/linchpin`, then `~/.cache/linchpin`. Set at runtime it also overrides the path baked into the `shell-init --notify` block |
 | `LINCHPIN_OUTPUT` | `json`, `quiet`, `human` — set the output mode once instead of per call |
 | `NO_COLOR` / `FORCE_COLOR` | Standard colour control |
 
@@ -355,8 +378,8 @@ Then clean up the two things that live outside the package. First the update-che
 rm -rf ~/.cache/linchpin
 ```
 
-Second, delete the `eval "$(linchpin shell-init)"` line from your shell profile, or every new
-shell will print `command not found`.
+Second, delete the `eval "$(linchpin shell-init --notify)"` line from your shell profile, or
+every new shell will print `command not found`.
 
 Nothing else is left behind. In particular:
 
