@@ -81,7 +81,7 @@ jobs:
       # would silently drop the input, and with it the deletion scoping that
       # keeps this repository from trashing another repository's pages under the
       # shared engineering-resources parent.
-      - uses: linchpin/docspress@3260df1c7deceb4da867bdba7967be4b807e4025
+      - uses: linchpin/docspress@381b29cf2dd48c365629615b35b572c877fdd865
         with:
           mode: publish
 
