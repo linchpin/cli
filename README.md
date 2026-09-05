@@ -510,10 +510,27 @@ the safety net. More on why this shapes the whole design:
 
 ```bash
 npm install
-npm run typecheck   # tsc --noEmit
-npm run build       # tsdown -> dist/
-npm test            # builds first, then node --test
+npm run typecheck       # tsc --noEmit
+npm run build           # tsdown -> dist/
+npm test                # builds first, then node --test
+
+npm run preflight       # all three, in order — also runs on git push (husky pre-push)
+npm run preflight:linux # the CI matrix on Linux, in Docker, before CI runs it
 ```
+
+`npm run preflight` proves the change on *your* machine. CI runs `ubuntu-latest`, and this
+CLI shells out — to bash, to git, to the filesystem — so the two are not the same evidence.
+macOS ships bash 3.2 and every runner has bash 5; BSD and GNU coreutils take different
+flags; the macOS filesystem is case-insensitive.
+
+`npm run preflight:linux` closes that gap. It stages the working tree into a `node:<version>`
+container, deletes ignored files so the container sees a clean checkout plus your uncommitted
+edits, and runs install, typecheck, build, test on **every Node in the CI matrix**, then the
+agent-readiness floor. The matrix, the linter version and the floor are read out of
+`.github/workflows/ci.yml`, and the score is computed by the same
+`scripts/agent-lint-report.mjs` the workflow calls — so a preflight cannot quietly disagree
+with the gate it is previewing. Run it before pushing anything that touches shell, git,
+process or filesystem behaviour. See `CLAUDE.md`.
 
 TypeScript and ESM, built with [tsdown](https://tsdown.dev). Every runtime dependency lives in
 `devDependencies` and is bundled into `dist/`, so the published package installs with **zero
