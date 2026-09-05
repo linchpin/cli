@@ -22,6 +22,8 @@
     "typecheck": "tsc --noEmit",
     "pretest": "npm run build",
     "test": "node --test",
+    "preflight": "bash scripts/preflight.sh",
+    "preflight:linux": "bash scripts/preflight.sh --linux",
     "prepack": "npm run build",
     "prepare": "husky || true",
     "commitlint": "commitlint --edit"
