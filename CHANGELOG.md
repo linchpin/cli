@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.3.0](https://github.com/linchpin/cli/compare/v1.2.1...v1.3.0) (2026-09-05)
+
+
+### Features ✨
+
+* **NO-TASK:** Announce a new release at shell startup ([#70](https://github.com/linchpin/cli/issues/70)) ([8e25ad0](https://github.com/linchpin/cli/commit/8e25ad0df241e2c706651f39614ae674f700148e))
+* **NO-TASK:** Require trust for repository hooks and contain path arguments ([#69](https://github.com/linchpin/cli/issues/69)) ([759e0e6](https://github.com/linchpin/cli/commit/759e0e694795fa9921fe9e137ca1f8cfb52b219a))
+
+
+### Miscellaneous Chores 🧹
+
+* **deps:** update dependency @inquirer/prompts to v8.7.1 ([#73](https://github.com/linchpin/cli/issues/73)) ([cc20587](https://github.com/linchpin/cli/commit/cc205873191bdbd6d9fb419fb004a6a2ef54a6e4))
+* **deps:** update dependency tinyexec to v1.3.1 ([#74](https://github.com/linchpin/cli/issues/74)) ([318efdb](https://github.com/linchpin/cli/commit/318efdb1f44750fec0ff097486222d0764ed3b8f))
+* **deps:** update dependency tsdown to ^0.23.0 ([#75](https://github.com/linchpin/cli/issues/75)) ([ffb2767](https://github.com/linchpin/cli/commit/ffb2767de753eeaa8c232a1742ae5ff7077821f0))
+* **deps:** update dependency zod to v4.5.4 ([#68](https://github.com/linchpin/cli/issues/68)) ([c44a9f6](https://github.com/linchpin/cli/commit/c44a9f671e98dd3938f78e771064e757dbd6cfbb))
+
 ## [1.2.1](https://github.com/linchpin/cli/compare/v1.2.0...v1.2.1) (2026-08-27)
 
 
