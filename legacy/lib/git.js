@@ -238,7 +238,7 @@ function inferBaseRepoPathFromWorktreeId(startPath) {
   const directCandidates = dedupePaths([
     path.join(parentRoot, repoName),
     path.join(grandparentRoot, repoName),
-    path.join(os.homedir(), 'Documents', 'GitHub', repoName),
+    path.join(os.homedir(), 'GitHub', repoName),
     path.join(os.homedir(), 'Documents', repoName),
     path.join(os.homedir(), repoName),
     ...agentScanRoots.map((root) => path.join(root, repoName))
@@ -253,7 +253,7 @@ function inferBaseRepoPathFromWorktreeId(startPath) {
   const scanRoots = dedupePaths([
     parentRoot,
     grandparentRoot,
-    path.join(os.homedir(), 'Documents', 'GitHub'),
+    path.join(os.homedir(), 'GitHub'),
     path.join(os.homedir(), 'Documents'),
     ...agentScanRoots
   ]);

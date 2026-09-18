@@ -49,7 +49,7 @@ different places.
 `defaultAgent` is not decorative: the agent you nominate is searched **first** when locating a
 repository, on the reasoning that a path you configured is a better guess than a preset one.
 
-Presets exist for `conductor` (`~/conductor`), `claude-code` (`~/Documents`) and `codex`
+Presets exist for `conductor` (`~/conductor`), `claude-code` (`~/GitHub`) and `codex`
 (`~/Documents/GitHub`). A `custom` entry takes any path you give it.
 
 The older single-agent form is still read:

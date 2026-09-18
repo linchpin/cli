@@ -103,7 +103,7 @@ is specified but **not yet built**. See [docs/repo-tasks.md](docs/repo-tasks.md)
 - A local WordPress environment: [Studio](https://developer.wordpress.com/studio/), `wp-env`,
   or LocalWP.
 - Your plugin, theme or `wp-content` repository cloned somewhere stable, e.g.
-  `~/Documents/GitHub/<name>`.
+  `~/GitHub/<name>`.
 - Optional: [`fzf`](https://github.com/junegunn/fzf), which turns the site and worktree pickers
   into fuzzy finders.
 
@@ -170,7 +170,7 @@ package manager. Undo it with `npm unlink -g @linchpinagency/cli`.
 Run this once per repository, from the **base worktree** (the original clone, not a worktree):
 
 ```bash
-cd ~/Documents/GitHub/my-plugin
+cd ~/GitHub/my-plugin
 linchpin wt config init
 ```
 
@@ -434,7 +434,7 @@ Notes that save an afternoon:
 
 - **One agent or many.** A single agent uses `agent` plus an optional `agentBasePath`; several
   use `agents` (name → base path) plus an optional `defaultAgent`. Defaults: Conductor
-  `~/conductor`, Claude Code `~/Documents`, Codex `~/Documents/GitHub`. With several configured,
+  `~/conductor`, Claude Code `~/GitHub`, Codex `~/Documents/GitHub`. With several configured,
   every path is searched, so the right base repo is found no matter which agent made the
   worktree.
 - `defaultEnvironment` may be omitted; the first environment key wins.

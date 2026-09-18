@@ -248,3 +248,14 @@ test('readConfigIfPresent returns null rather than throwing when there is no con
   assert.equal(lib.readConfigIfPresent(dir), null);
   assert.throws(() => lib.readConfig(dir), /Missing \.linchpin\.json/);
 });
+
+test('agent presets: Claude Code lives under ~/GitHub, not ~/Documents', () => {
+  const home = os.homedir();
+  assert.equal(lib.AGENT_BASE_PATHS['claude-code'], '~/GitHub');
+  assert.equal(lib.getAgentBasePath('claude-code'), path.join(home, 'GitHub'));
+  assert.equal(lib.getAgentBasePath('conductor'), path.join(home, 'conductor'));
+  assert.equal(lib.getAgentBasePath('codex'), path.join(home, 'Documents', 'GitHub'));
+  // custom has no preset; the user's path wins.
+  assert.equal(lib.getAgentBasePath('custom'), null);
+  assert.equal(lib.resolveAgentPath('custom', '~/my-projects'), path.join(home, 'my-projects'));
+});

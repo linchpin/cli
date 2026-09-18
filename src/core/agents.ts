@@ -10,7 +10,7 @@ export type AgentName = (typeof AGENT_VALUES)[number];
  */
 export const AGENT_BASE_PATHS: Readonly<Record<AgentName, string | null>> = {
   conductor: '~/conductor',
-  'claude-code': '~/Documents',
+  'claude-code': '~/GitHub',
   codex: '~/Documents/GitHub',
   custom: null,
 };
