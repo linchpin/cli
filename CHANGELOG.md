@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.2.2](https://github.com/linchpin/cli/compare/v1.2.1...v1.2.2) (2026-09-19)
+
+
+### Bug Fixes 🐛
+
+* **NO-TASK:** Require an agent selection in wt config init and default Claude Code to GitHub ([#82](https://github.com/linchpin/cli/issues/82)) ([d215986](https://github.com/linchpin/cli/commit/d215986df6fae4daef904decac87169117af2876))
+
+
+### Miscellaneous Chores 🧹
+
+* **deps:** bump js-yaml from 4.3.1 to 4.3.2 ([#81](https://github.com/linchpin/cli/issues/81)) ([ac5f014](https://github.com/linchpin/cli/commit/ac5f0143203233885e6e0c1f3b033788c28e2401))
+* **deps:** update dependency @inquirer/prompts to v8.7.1 ([#73](https://github.com/linchpin/cli/issues/73)) ([cc20587](https://github.com/linchpin/cli/commit/cc205873191bdbd6d9fb419fb004a6a2ef54a6e4))
+* **deps:** update dependency @inquirer/prompts to v8.7.2 ([#78](https://github.com/linchpin/cli/issues/78)) ([178d754](https://github.com/linchpin/cli/commit/178d754465d8b2d1e359bce09f3201f22e9a29af))
+* **deps:** update dependency @types/node to v24.13.6 ([#79](https://github.com/linchpin/cli/issues/79)) ([ae89834](https://github.com/linchpin/cli/commit/ae898349ebee341164c0b526992ff2f638cf3fe7))
+* **deps:** update dependency tinyexec to v1.3.1 ([#74](https://github.com/linchpin/cli/issues/74)) ([318efdb](https://github.com/linchpin/cli/commit/318efdb1f44750fec0ff097486222d0764ed3b8f))
+* **deps:** update dependency tsdown to ^0.23.0 ([#75](https://github.com/linchpin/cli/issues/75)) ([ffb2767](https://github.com/linchpin/cli/commit/ffb2767de753eeaa8c232a1742ae5ff7077821f0))
+* **deps:** update dependency zod to v4.5.4 ([#68](https://github.com/linchpin/cli/issues/68)) ([c44a9f6](https://github.com/linchpin/cli/commit/c44a9f671e98dd3938f78e771064e757dbd6cfbb))
+* **deps:** update dependency zod to v4.6.5 ([#80](https://github.com/linchpin/cli/issues/80)) ([4666828](https://github.com/linchpin/cli/commit/4666828dc95a417860367fe724f6aa5d0c37be09))
+
 ## [1.2.1](https://github.com/linchpin/cli/compare/v1.2.0...v1.2.1) (2026-08-27)
 
 
