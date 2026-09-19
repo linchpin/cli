@@ -39,8 +39,11 @@ name: Sync docs to WordPress
 # repository's own branch of the tree so a sync here cannot trash another
 # repository's pages.
 #
-# Both actions are pinned to immutable commit SHAs. Do not replace them with
-# floating tags — this job is exposed to a WordPress token.
+# actions/checkout is pinned to an immutable commit SHA: it is third party, and
+# this job is exposed to a WordPress token. linchpin/docspress is not pinned —
+# it is our own fork, in our own organisation, behind branch protection, so a
+# SHA pin defends against nothing here while guaranteeing we miss its fixes.
+# See its README for the v1 contract.
 #
 # ⚠️ This repository is PUBLIC and this job holds a WordPress write token.
 # Never add pull_request or pull_request_target triggers: a fork could then
@@ -76,12 +79,11 @@ jobs:
       # actions/checkout v7
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
-      # linchpin/docspress feature/managed-path-scope. This SHA is NOT on main:
-      # managed-path exists only on that branch. Moving to a main-tracking ref
-      # would silently drop the input, and with it the deletion scoping that
-      # keeps this repository from trashing another repository's pages under the
-      # shared engineering-resources parent.
-      - uses: linchpin/docspress@381b29cf2dd48c365629615b35b572c877fdd865
+      # v1 moves forward as fixes land; a breaking change becomes v2. It
+      # carries managed-path, which is what keeps a sync here from trashing
+      # another repository's pages under the shared engineering-resources
+      # parent — so a ref without that input must never be used.
+      - uses: linchpin/docspress@v1
         with:
           mode: publish
 
