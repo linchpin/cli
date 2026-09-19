@@ -10,6 +10,7 @@ const {
 } = require('../lib/git');
 const { runCommand } = require('../lib/shell');
 const {
+  collapseHome,
   configPathFor,
   expandHome,
   getAgentBasePath,
@@ -867,7 +868,7 @@ async function runConfigInitPrompts(basePath, options = {}) {
 
   const agentChoices = [
     { value: 'conductor', name: 'Conductor (~/conductor)' },
-    { value: 'claude-code', name: 'Claude Code (~/Documents)' },
+    { value: 'claude-code', name: 'Claude Code (~/GitHub)' },
     { value: 'codex', name: 'Codex (~/Documents/GitHub)' },
     {
       value: 'custom',
@@ -887,8 +888,11 @@ async function runConfigInitPrompts(basePath, options = {}) {
   const selectedAgentValues = await checkbox({
     message:
       'Which agents do you use? (We\'ll look for worktrees in all selected paths — e.g. Codex for some work, Conductor for another.)',
-    choices: agentChoices,
-    default: defaultAgentSelection.length > 0 ? defaultAgentSelection.filter((a) => agentChoices.some((c) => c.value === a)) : []
+    choices: agentChoices.map((choice) => ({
+      ...choice,
+      checked: defaultAgentSelection.includes(choice.value)
+    })),
+    required: true
   });
 
   if (!selectedAgentValues || selectedAgentValues.length === 0) {
@@ -899,12 +903,18 @@ async function runConfigInitPrompts(basePath, options = {}) {
   for (const agent of selectedAgentValues) {
     if (agent === 'custom') {
       const customBase = await input({
-        message: 'Base path for this custom agent (e.g. ~/my-projects)',
-        default: existingAgents?.custom || ''
+        message: 'Base path for this custom agent (the directory your repos live under)',
+        default: existingAgents?.custom || collapseHome(path.dirname(basePath)),
+        validate: (value) => {
+          const trimmed = (value || '').trim();
+          if (!trimmed) return 'Enter a directory path, e.g. ~/my-projects.';
+          const resolved = path.resolve(expandHome(trimmed));
+          if (!fs.existsSync(resolved)) return `${resolved} does not exist.`;
+          if (!fs.statSync(resolved).isDirectory()) return `${resolved} is not a directory.`;
+          return true;
+        }
       });
-      if (customBase && customBase.trim()) {
-        agents.custom = path.resolve(expandHome(customBase.trim()));
-      }
+      agents.custom = path.resolve(expandHome(customBase.trim()));
     } else {
       const resolved = getAgentBasePath(agent);
       if (resolved) agents[agent] = resolved;

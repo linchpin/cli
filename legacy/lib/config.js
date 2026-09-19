@@ -32,7 +32,7 @@ const AGENT_VALUES = Object.freeze(['conductor', 'claude-code', 'codex', 'custom
 /** Default base path per agent (repos live under this directory). Custom has no default. */
 const AGENT_BASE_PATHS = Object.freeze({
   conductor: '~/conductor',
-  'claude-code': '~/Documents',
+  'claude-code': '~/GitHub',
   codex: '~/Documents/GitHub',
   custom: null
 });
