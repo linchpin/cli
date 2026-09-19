@@ -1,0 +1,8 @@
+# The local gates, before a push turns into a red PR. ~10 seconds.
+#
+# This proves the change on *this* machine. CI runs Linux, so anything that
+# shells out to bash, git or the filesystem still wants `npm run preflight:linux`
+# — see CLAUDE.md.
+#
+# Skip deliberately with `git push --no-verify`, or `HUSKY=0 git push`.
+npm run --silent preflight

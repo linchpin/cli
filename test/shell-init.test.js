@@ -116,6 +116,12 @@ function stubBin(root) {
   return { bin, marker };
 }
 
+/**
+ * Bash's own complaints about starting interactively with no controlling
+ * terminal. Every message here is emitted before the snippet is sourced.
+ */
+const BASH_JOB_CONTROL_NOISE = /no job control in this shell|cannot set terminal process group/;
+
 /** Source a snippet in an interactive bash and return what each stream saw. */
 function sourceInBash(snippet, root, env = {}, { interactive = true } = {}) {
   const file = path.join(root, 'snippet.sh');
@@ -130,10 +136,16 @@ function sourceInBash(snippet, root, env = {}, { interactive = true } = {}) {
     code: result.status ?? 0,
     stdout: result.stdout ?? '',
     // `bash -i` without a controlling terminal announces its lack of job
-    // control on stderr. That is bash talking, not the snippet.
+    // control on stderr, and the wording is version- and platform-specific:
+    // bash 3.2 (macOS) says only "no job control in this shell", while bash 5
+    // (Linux, so every CI runner) prefixes that with "cannot set terminal
+    // process group (N): Inappropriate ioctl for device". That is bash
+    // talking, not the snippet, so drop the whole family rather than one line
+    // of it — a filter that matches only the local wording is a test that
+    // passes on a laptop and fails in CI.
     stderr: (result.stderr ?? '')
       .split('\n')
-      .filter((line) => !line.includes('no job control'))
+      .filter((line) => !BASH_JOB_CONTROL_NOISE.test(line))
       .join('\n')
       .trim(),
   };
