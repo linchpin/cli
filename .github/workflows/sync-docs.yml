@@ -45,6 +45,29 @@ name: Sync docs to WordPress
 # ⚠️ This repository is PUBLIC and this job holds a WordPress write token.
 # Never add pull_request or pull_request_target triggers: a fork could then
 # reach the token. workflow_dispatch and push-to-main both require write access.
+#
+# ⚠️ REQUIRES THE DocsPress Blocks PLUGIN ON THE TARGET.
+#
+# docs/ uses `docspress:block` envelopes — the readable Markdown form that the
+# pinned action expands into dynamic `wp:docspress/*` blocks before publishing.
+# Twelve block types are in use across the ten pages: hero, audience-paths,
+# callout, fields, flow, diagram, code-tabs, colorful-code, file-tree, prompt,
+# result, terminal-session, troubleshooter.
+#
+# These are DYNAMIC blocks. Without `plugins/docspress-blocks/` installed and
+# activated on docs.linchpin.com, WordPress has no render callback for them and
+# each one renders as NOTHING — the surrounding prose survives, the block does
+# not. The Markdown preview inside each envelope is discarded at publish time;
+# it exists so the source stays readable on GitHub, not as a fallback.
+#
+# So confirm the plugin is active on the target before setting dry-run: false.
+# A dry run cannot catch this: it reports the pages it would write, not whether
+# the target can render what is in them.
+#
+# The plugin must match the action revision pinned below. Block names and
+# attributes were validated against
+# linchpin/docspress@381b29cf2dd48c365629615b35b572c877fdd865 —
+# plugins/docspress-blocks/blocks/<name>/block.php.
 
 on:
   workflow_dispatch:

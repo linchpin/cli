@@ -13,18 +13,61 @@ invites the copy and the repo to disagree.
 The plugin slot in your WordPress install is a **symlink**, and switching branches means
 repointing it.
 
-```
-~/GitHub/my-plugin              <- the repo, on main
-~/GitHub/my-plugin@feature-a    <- a worktree
-~/GitHub/my-plugin@feature-b    <- another worktree
+<!-- docspress:block
+{
+  "version": 1,
+  "name": "docspress/file-tree",
+  "attrs": {
+    "root": "~/GitHub/",
+    "tree": "my-plugin/            the base repo, on main\nmy-plugin@feature-a/  a worktree\nmy-plugin@feature-b/  another worktree",
+    "caption": "Each worktree keeps its own uncommitted state, and its own node_modules and vendor directories."
+  }
+}
+-->
+#### ~/GitHub/
 
+```text
+my-plugin/            the base repo, on main
+my-plugin@feature-a/  a worktree
+my-plugin@feature-b/  another worktree
+```
+
+_Each worktree keeps its own uncommitted state, and its own node_modules and vendor directories._
+<!-- /docspress:block -->
+
+The WordPress install holds one slot for the plugin, and that slot is a symlink:
+
+```text
 ~/Studio/mysite/wp-content/plugins/my-plugin
-        └── symlink, currently -> ~/GitHub/my-plugin@feature-a
+        └── symlink, currently pointing at ~/GitHub/my-plugin@feature-a
 ```
 
 ```bash
 linchpin wt switch feature-b
 ```
+
+<!-- docspress:block
+{
+  "version": 1,
+  "name": "docspress/diagram",
+  "attrs": {
+    "title": "What a switch actually does",
+    "type": "flow",
+    "source": "linchpin wt switch -> plugin slot symlink: repoint\nplugin slot symlink -> my-plugin@feature-b: now resolves to\nWordPress -> plugin slot symlink: next request reads",
+    "caption": "One inode changes. Nothing is copied and nothing is rebuilt."
+  }
+}
+-->
+#### What a switch actually does
+
+```text
+linchpin wt switch -> plugin slot symlink: repoint
+plugin slot symlink -> my-plugin@feature-b: now resolves to
+WordPress -> plugin slot symlink: next request reads
+```
+
+_One inode changes. Nothing is copied and nothing is rebuilt._
+<!-- /docspress:block -->
 
 The symlink now points at `my-plugin@feature-b`. WordPress is unaware anything happened; the
 next request simply reads different files. Nothing is copied, nothing is rebuilt, and every
@@ -59,17 +102,47 @@ error-prone", that gap is what this fills.
 
 ## Two behaviours worth knowing
 
-**Repointing is idempotent, including over a broken link.** Switching to the branch you are
-already on reports "already linked" and changes nothing. More usefully, a link whose target was
-deleted — say an agent removed a worktree while you were away — is still recognised and
-repointed rather than erroring. The check reads the path the link *records* rather than
-following it, which is why a dangling link is not a dead end.
+<!-- docspress:block
+{
+  "version": 1,
+  "name": "docspress/callout",
+  "attrs": {
+    "tone": "tip",
+    "title": "Repointing is idempotent, including over a broken link",
+    "content": "<p>Switching to the branch you are already on reports \"already linked\" and changes nothing. More usefully, a link whose target was deleted — say an agent removed a worktree while you were away — is still recognised and repointed rather than erroring. The check reads the path the link <em>records</em> rather than following it, which is why a dangling link is not a dead end.</p>",
+    "collapsible": false
+  }
+}
+-->
+> [!TIP]
+>
+> **Repointing is idempotent, including over a broken link**
+>
+> Switching to the branch you are already on reports "already linked" and changes nothing. More usefully, a link whose target was deleted — say an agent removed a worktree while you were away — is still recognised and repointed rather than erroring. The check reads the path the link _records_ rather than following it, which is why a dangling link is not a dead end.
+<!-- /docspress:block -->
 
-**A real directory is never silently replaced.** If the plugin slot holds an actual directory
-rather than a symlink, the switch refuses and tells you to pass `--force`. That directory may be
-the only copy of something. When the setup wizard meets the same situation it offers to rename
-it to `.bkp`, delete it, or skip — and it refuses to overwrite an existing `.bkp`, because at
-that point the backup is the only copy.
+<!-- docspress:block
+{
+  "version": 1,
+  "name": "docspress/callout",
+  "attrs": {
+    "tone": "warning",
+    "title": "A real directory is never silently replaced",
+    "content": "<p>If the plugin slot holds an actual directory rather than a symlink, the switch refuses and tells you to pass <code>--force</code>. That directory may be the only copy of something.</p><p>Two further guards sit behind <code>--force</code>. Without a TTY it also requires <code>--yes</code>, rather than reading silence as consent. And the target must look like a WordPress content path — some segment named <code>wp-content</code>, or a parent of <code>plugins</code>, <code>themes</code> or <code>mu-plugins</code> — before anything is deleted, because the path came from a file the repository controls.</p><p>When the setup wizard meets the same situation it offers to rename the directory to <code>.bkp</code>, delete it, or skip. It refuses to overwrite an existing <code>.bkp</code>, because at that point the backup is the only copy.</p>",
+    "collapsible": false
+  }
+}
+-->
+> [!WARNING]
+>
+> **A real directory is never silently replaced**
+>
+> If the plugin slot holds an actual directory rather than a symlink, the switch refuses and tells you to pass `--force`. That directory may be the only copy of something.
+>
+> Two further guards sit behind `--force`. Without a TTY it also requires `--yes`, rather than reading silence as consent. And the target must look like a WordPress content path — some segment named `wp-content`, or a parent of `plugins`, `themes` or `mu-plugins` — before anything is deleted, because the path came from a file the repository controls.
+>
+> When the setup wizard meets the same situation it offers to rename the directory to `.bkp`, delete it, or skip. It refuses to overwrite an existing `.bkp`, because at that point the backup is the only copy.
+<!-- /docspress:block -->
 
 ## Recovering when the ground moves
 

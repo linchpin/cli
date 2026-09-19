@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "docspress-install": {
+      "source": "Automattic/docspress",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/docspress-install/SKILL.md",
+      "computedHash": "9550b37e87191d385391e47c8942e594b665217fc19e2f319075c238e3d5691e"
+    },
+    "generate-docs-from-source": {
+      "source": "Automattic/docspress",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/generate-docs-from-source/SKILL.md",
+      "computedHash": "888d69b53bfb3aa03dfde9da5ee95623b6f4d8ec083a9b8b3ec417e14dd5aa1f"
+    }
+  }
+}

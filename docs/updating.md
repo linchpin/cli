@@ -6,12 +6,98 @@ walkthrough.
 
 ## Install
 
+<!-- docspress:block
+{
+  "version": 1,
+  "name": "docspress/code-tabs",
+  "attrs": {
+    "tabs": [
+      {
+        "label": "npm",
+        "language": "bash",
+        "filename": "Terminal",
+        "code": "npm install -g @linchpinagency/cli"
+      },
+      {
+        "label": "pnpm",
+        "language": "bash",
+        "filename": "Terminal",
+        "code": "pnpm add -g @linchpinagency/cli"
+      },
+      {
+        "label": "bun",
+        "language": "bash",
+        "filename": "Terminal",
+        "code": "bun add -g @linchpinagency/cli"
+      },
+      {
+        "label": "yarn",
+        "language": "bash",
+        "filename": "Terminal",
+        "code": "yarn global add @linchpinagency/cli"
+      }
+    ],
+    "showLineNumbers": false,
+    "caption": "yarn global add is yarn 1.x only; yarn 2+ removed it. Whichever you use, linchpin update will detect it later from the path this copy runs from."
+  }
+}
+-->
+#### npm — Terminal
+
 ```bash
-npm install -g @linchpinagency/cli      # or pnpm add -g / bun add -g
-linchpin version
+npm install -g @linchpinagency/cli
 ```
 
-Global, not a project dependency: it is a tool you point at many repositories.
+#### pnpm — Terminal
+
+```bash
+pnpm add -g @linchpinagency/cli
+```
+
+#### bun — Terminal
+
+```bash
+bun add -g @linchpinagency/cli
+```
+
+#### yarn — Terminal
+
+```bash
+yarn global add @linchpinagency/cli
+```
+
+_yarn global add is yarn 1.x only; yarn 2+ removed it. Whichever you use, linchpin update will detect it later from the path this copy runs from._
+<!-- /docspress:block -->
+
+Global, not a project dependency: it is a tool you point at many repositories. Node **22.12**
+or newer is required — that is the `engines` floor CI tests against.
+
+<!-- docspress:block
+{
+  "version": 1,
+  "name": "docspress/terminal-session",
+  "attrs": {
+    "title": "Confirm the install, and that PATH picked it up",
+    "shell": "bash",
+    "prompt": "$",
+    "command": "linchpin version",
+    "output": "@linchpinagency/cli 1.2.1\nUp to date (checked just now)"
+  }
+}
+-->
+#### Confirm the install, and that PATH picked it up
+
+```bash
+$ linchpin version
+```
+
+**Output**
+
+```text
+@linchpinagency/cli 1.2.1
+Up to date (checked just now)
+```
+<!-- /docspress:block -->
 
 `linchpin shell-init` emits a shell function that re-enters your current directory after a
 successful `wt switch`, because a child process cannot change its parent shell's directory. Add
@@ -51,12 +137,28 @@ has gone stale it spawns a detached process to refresh it — `detached`, stdio 
 `unref()`ed — so the command you actually ran never waits on a network round trip. That child is
 marked with `LINCHPIN_UPDATE_CHECK_CHILD`, so it cannot spawn a refresh of its own.
 
-**A corrupt cache means "ask again", not "fail".** Every read and write here is best-effort: a
-read-only home directory or a truncated file must never break the command someone was running.
-
-**An unparseable version never reads as newer.** If a registry answers with something that is
-not a semver, the comparison returns "equal" rather than "newer" — otherwise every invocation
-would nag with no version that could ever satisfy it.
+<!-- docspress:block
+{
+  "version": 1,
+  "name": "docspress/callout",
+  "attrs": {
+    "tone": "note",
+    "title": "Everything on this path fails soft",
+    "content": "<p><strong>A corrupt cache means \"ask again\", not \"fail\".</strong> Every read and write here is best-effort: a read-only home directory or a truncated file must never break the command someone was running.</p><p><strong>An unparseable version never reads as newer.</strong> If a registry answers with something that is not a semver, the comparison returns \"equal\" rather than \"newer\" — otherwise every invocation would nag with no version that could ever satisfy it.</p><p><strong>A checkedAt in the future is treated as stale.</strong> That is a clock change, not a fresh answer.</p>",
+    "collapsible": false
+  }
+}
+-->
+> [!NOTE]
+>
+> **Everything on this path fails soft**
+>
+> **A corrupt cache means "ask again", not "fail".** Every read and write here is best-effort: a read-only home directory or a truncated file must never break the command someone was running.
+>
+> **An unparseable version never reads as newer.** If a registry answers with something that is not a semver, the comparison returns "equal" rather than "newer" — otherwise every invocation would nag with no version that could ever satisfy it.
+>
+> **A checkedAt in the future is treated as stale.** That is a clock change, not a fresh answer.
+<!-- /docspress:block -->
 
 ## Who gets told, after a command
 
@@ -152,12 +254,118 @@ is the parent process — true during `npm install`, never when a user runs `lin
 Getting this wrong is not cosmetic. Handing a pnpm or bun install an `npm install -g` leaves two
 copies on the machine, and which one answers depends on `PATH` order.
 
-## Uninstall
+Check what it decided without running anything:
 
 ```bash
-npm uninstall -g @linchpinagency/cli     # or pnpm remove -g / bun remove -g
-rm -rf ~/.cache/linchpin                 # the update-check cache and the notice file
+linchpin update --dry-run       # prints the command it would run, and stops
+linchpin version --json         # install.manager, install.scope, install.updateCommand
 ```
+
+<!-- docspress:block
+{
+  "version": 1,
+  "name": "docspress/result",
+  "attrs": {
+    "status": "success",
+    "title": "What a completed update looks like",
+    "content": "<p>The check window is reset so the notifier does not repeat a notice that has just been acted on, and <code>update-notice.txt</code> is removed with it — otherwise every new terminal would keep advertising an update that is already installed.</p>",
+    "meta": "linchpin update · exit 0 · changed: true"
+  }
+}
+-->
+> [!TIP]
+>
+> **What a completed update looks like**
+>
+> The check window is reset so the notifier does not repeat a notice that has just been acted on, and `update-notice.txt` is removed with it — otherwise every new terminal would keep advertising an update that is already installed.
+>
+> _linchpin update · exit 0 · changed: true_
+<!-- /docspress:block -->
+
+## Uninstall
+
+<!-- docspress:block
+{
+  "version": 1,
+  "name": "docspress/code-tabs",
+  "attrs": {
+    "tabs": [
+      {
+        "label": "npm",
+        "language": "bash",
+        "filename": "Terminal",
+        "code": "npm uninstall -g @linchpinagency/cli\nrm -rf ~/.cache/linchpin"
+      },
+      {
+        "label": "pnpm",
+        "language": "bash",
+        "filename": "Terminal",
+        "code": "pnpm remove -g @linchpinagency/cli\nrm -rf ~/.cache/linchpin"
+      },
+      {
+        "label": "bun",
+        "language": "bash",
+        "filename": "Terminal",
+        "code": "bun remove -g @linchpinagency/cli\nrm -rf ~/.cache/linchpin"
+      },
+      {
+        "label": "yarn",
+        "language": "bash",
+        "filename": "Terminal",
+        "code": "yarn global remove @linchpinagency/cli\nrm -rf ~/.cache/linchpin"
+      },
+      {
+        "label": "npm link",
+        "language": "bash",
+        "filename": "Terminal",
+        "code": "npm unlink -g @linchpinagency/cli"
+      }
+    ],
+    "showLineNumbers": false,
+    "caption": "linchpin version names the manager under install.manager, and the exact cache location under cachePath, if you are unsure. A source checkout never wrote the cache, so there is nothing to remove."
+  }
+}
+-->
+#### npm — Terminal
+
+```bash
+npm uninstall -g @linchpinagency/cli
+rm -rf ~/.cache/linchpin
+```
+
+#### pnpm — Terminal
+
+```bash
+pnpm remove -g @linchpinagency/cli
+rm -rf ~/.cache/linchpin
+```
+
+#### bun — Terminal
+
+```bash
+bun remove -g @linchpinagency/cli
+rm -rf ~/.cache/linchpin
+```
+
+#### yarn — Terminal
+
+```bash
+yarn global remove @linchpinagency/cli
+rm -rf ~/.cache/linchpin
+```
+
+#### npm link — Terminal
+
+```bash
+npm unlink -g @linchpinagency/cli
+```
+
+_linchpin version names the manager under install.manager, and the exact cache location under cachePath, if you are unsure. A source checkout never wrote the cache, so there is nothing to remove._
+<!-- /docspress:block -->
+
+Hook approvals live outside the cache, at `~/.local/share/linchpin/trust.json` by default.
+Removing them is optional; leaving them means a reinstall does not have to re-approve hooks
+you already reviewed.
 
 Then remove the `eval "$(linchpin shell-init --notify)"` line from your shell profile. Left
 behind, the notice block is harmless — it checks for `linchpin` on `PATH` and returns — but the
