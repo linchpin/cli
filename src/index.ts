@@ -148,6 +148,23 @@ export {
   type HookPhase,
 } from './core/hooks.js';
 
+export {
+  BANNER_URL,
+  CHANNELS,
+  PLUGIN_SCAFFOLD_PIN,
+  assertValidSlug,
+  leftoverIdentity,
+  loadPin,
+  resolveTemplateRoot,
+  scaffoldPlugin,
+  studlySlug,
+  titleCaseSlug,
+  type Channel,
+  type PluginScaffoldPin,
+  type ScaffoldOptions,
+  type ScaffoldResult,
+} from './core/plugin-scaffold.js';
+
 export { readManifest, readVersion, type Manifest } from './version.js';
 
 export {

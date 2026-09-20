@@ -438,6 +438,11 @@ any unclassified one. The skills settle several:
 | `skills install`, `skills update` | `write` | Overwrites installed skill directories in place |
 | `agent setup` | `write` | Writes settings and hook config |
 | `json set/patch/merge` | `write` | — |
+| `plugin scaffold` | `write` | `wp-plugin-standards` is the owner of what a generated plugin must contain |
+
+`plugin scaffold` is that skill's executable form for a *new* plugin tree. The standard repo
+is [`linchpin/plugin-scaffold`](https://github.com/linchpin/plugin-scaffold). See
+[plugin-scaffold.md](plugin-scaffold.md). Do not invent a second file list in this CLI.
 
 `skills install` deserves a note: the library's installer **`rmSync` + `cpSync` each destination
 skill directory**, and `write-a-linchpin-skill` warns *never hand-edit skills in a consuming

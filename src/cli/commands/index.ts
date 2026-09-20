@@ -1,5 +1,6 @@
 import type { CommandDefinition } from '../registry.js';
 
+import { pluginScaffoldCommand } from './plugin-scaffold.js';
 import { shellInitCommand } from './shell-init.js';
 import { updateCommand } from './update.js';
 import { versionCommand } from './version.js';
@@ -14,6 +15,7 @@ import { wtCommand } from './wt.js';
  */
 export const COMMANDS: readonly CommandDefinition[] = [
   wtCommand,
+  pluginScaffoldCommand,
   shellInitCommand,
   versionCommand,
   updateCommand,

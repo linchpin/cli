@@ -1,0 +1,7 @@
+{
+  "name": "@linchpin/plugin-scaffold",
+  "version": "0.1.0",
+  "scripts": {
+    "build": "wp-scripts build"
+  }
+}

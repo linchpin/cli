@@ -269,6 +269,11 @@ so it is testable without a single credential.
    `gh secret set`. The org-shadow refusal lands here.
 3. **Template rendering and `--scaffold`.** Render, compare, open the PR. The missing-file case
    first; drift is the same code path with a different PR body.
+
+   This `--scaffold` is **not** `linchpin plugin scaffold`. That command creates a new plugin
+   tree from [`linchpin/plugin-scaffold`](https://github.com/linchpin/plugin-scaffold). See
+   [plugin-scaffold.md](plugin-scaffold.md). This one lands workflow files on a repo that
+   already exists.
 4. **Post-write proof.** Dispatch the dry-run workflow and wait on the conclusion, so a task
    only reports connected once something has actually run green.
 

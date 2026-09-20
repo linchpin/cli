@@ -156,6 +156,7 @@ cache flush, or environment fixup around each worktree operation.
 | [Agent integration](agent-integration.md) | Output modes, exit codes, and the approval-friction problem this CLI exists to remove |
 | [Troubleshooting](troubleshooting.md) | Real error strings, the guardrails that raise them, and the safe way past each one |
 | [Conventions from the skills library](skills-conventions.md) | The conventions every command must honour, extracted from `linchpin/skills` |
+| [Plugin scaffold](plugin-scaffold.md) | `linchpin plugin scaffold` — generate a plugin from `linchpin/plugin-scaffold` |
 | [Repo tasks](repo-tasks.md) | **Spec, not yet built.** `linchpin repo <task>` — connecting a repository to the release infrastructure in one command |
 
 ## Status
