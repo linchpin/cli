@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.2.3](https://github.com/linchpin/cli/compare/v1.2.2...v1.2.3) (2026-09-20)
+
+
+### Tests 🧪
+
+* **NO-TASK:** Filter the bash 5 job-control warning, and preflight the CI matrix locally ([#76](https://github.com/linchpin/cli/issues/76)) ([ca798fc](https://github.com/linchpin/cli/commit/ca798fce083d7ebad3bece8a1c4dc233e201a0f0))
+
+
+### Miscellaneous Chores 🧹
+
+* **deps:** update commitlint monorepo to v21.2.3 ([#85](https://github.com/linchpin/cli/issues/85)) ([ad5017a](https://github.com/linchpin/cli/commit/ad5017a753b6f89f7ab8eef2127397e79187b8da))
+
 ## [1.2.2](https://github.com/linchpin/cli/compare/v1.2.1...v1.2.2) (2026-09-19)
 
 
