@@ -39,6 +39,7 @@ cache flush, or environment fixup around each worktree operation.
 | [Hooks](hooks.md) | The 12 hook points, the environment contract, and why hooks are sourced rather than executed |
 | [Agent integration](agent-integration.md) | Output modes, exit codes, and the approval-friction problem this CLI exists to remove |
 | [Conventions from the skills library](skills-conventions.md) | The conventions every command must honour, extracted from `linchpin/skills` |
+| [Plugin scaffold](plugin-scaffold.md) | `linchpin plugin scaffold` — generate a plugin from `linchpin/plugin-scaffold` |
 | [Repo tasks](repo-tasks.md) | **Spec, not yet built.** `linchpin repo <task>` — connecting a repository to the release infrastructure in one command |
 
 ## Status

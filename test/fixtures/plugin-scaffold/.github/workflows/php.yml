@@ -1,0 +1,4 @@
+name: PHP
+jobs:
+    php:
+        uses: linchpin/actions/.github/workflows/php-checks.yml@v4

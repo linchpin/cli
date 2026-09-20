@@ -1,0 +1,5 @@
+name: Plugin Check
+jobs:
+    plugin-check:
+        with:
+            exclude_checks: plugin_updater
