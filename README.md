@@ -591,14 +591,40 @@ Releases are managed by `release-please` in GitHub Actions:
 3. Merging that PR creates the GitHub release and tag.
 4. The `publish-npm` job then builds, tests and publishes to npm with provenance.
 
-Step 4 authenticates with the `NPM_TOKEN` repository secret, and that token needs write access
-to the **whole `@linchpinagency` scope** — a granular npm token only ever covers packages that
-existed when it was created, so one minted before a package's first publish cannot publish it.
-npm answers an unauthorized write with `404`, not `403`, so the symptom is a confusing
-`E404 … PUT https://registry.npmjs.org/@linchpinagency%2fcli`, not a permission error. The job
-verifies the credential before building so that failure names its own cause.
+Step 4 authenticates with [npm Trusted Publishing][tp]: the `id-token: write` permission lets
+npm mint a short-lived credential from GitHub's own OIDC token, checked against a trusted
+publisher registered for this package. There is **no `NPM_TOKEN`** to rotate, leak, or discover
+is scoped too narrowly, and provenance is attached automatically.
 
-A publish that failed for a credential reason needs no new release: fix the token and re-run the
-`publish-npm` job on the existing tag.
+That last problem is why this changed. A granular npm token only ever covers packages that
+existed when it was created, so one minted before a package's first publish cannot publish it —
+and npm answers an unauthorized write with `404` rather than `403`, so the symptom was a
+confusing `E404 … PUT https://registry.npmjs.org/@linchpinagency%2fcli` that read as if the
+package did not exist. Every release from v1.1.0 to v1.1.3 failed that way.
+
+[tp]: https://docs.npmjs.com/trusted-publishers
+
+The trusted publisher must match what actually runs, and npm does **not** validate the record
+when you save it — a wrong field only ever surfaces as a failed publish:
+
+```bash
+npm trust list @linchpinagency/cli
+# repository: linchpin/cli
+# file:       release-please.yml
+# environment: (empty — the publish job declares none)
+```
+
+The publish job pins Node to the `engines.node` floor so the artifact is proven on the oldest
+runtime we support, and that Node ships npm 10, which is too old for trusted publishing. So the
+job upgrades npm to `^11.5.1` immediately before publishing — after the install and the tests,
+which still run on the floor's own npm. Not `npm@latest`: npm 12 requires Node `^22.22.2` and
+would refuse to run on the very runtime this job pins on purpose.
+
+A publish that failed for a reason outside the code needs no new release. Run the workflow
+manually with `tag` set to the version to publish:
+
+```bash
+gh workflow run release-please.yml -f tag=v1.2.3
+```
 
 ![Linchpin an award winning digital agency building immersive, high performing web experiences](https://assets.linchpin.com/github/linchpin-github-repo-banner.jpg)
