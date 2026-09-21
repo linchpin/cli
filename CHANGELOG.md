@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/linchpin/cli/compare/v1.2.3...v1.3.0) (2026-09-21)
+
+
+### Features ✨
+
+* **LINCHPIN-5636:** Add linchpin plugin scaffold ([#86](https://github.com/linchpin/cli/issues/86)) ([833da89](https://github.com/linchpin/cli/commit/833da898853a132511bbcacdeb8b5d7728f4a9d4))
+
 ## [1.2.3](https://github.com/linchpin/cli/compare/v1.2.2...v1.2.3) (2026-09-20)
 
 
