@@ -123,6 +123,12 @@ test('renders acme from the fixture', () => {
   );
   assert.doesNotMatch(readme.replaceAll(BANNER, ''), /plugin-scaffold/);
 
+  const readmeTxt = fs.readFileSync(path.join(dest, 'readme.txt'), 'utf8');
+  assert.match(readmeTxt, /^=== Acme ===$/m);
+  assert.match(readmeTxt, /^A test plugin\.$/m);
+  assert.match(readmeTxt, /^== Description ==$/m);
+  assert.doesNotMatch(readmeTxt, /Stable tag:/);
+
   const leftovers = lib.leftoverIdentity(dest);
   assert.deepEqual(leftovers, []);
 });
@@ -139,12 +145,19 @@ test('with-blocks and wporg overlays', () => {
     FIXTURE,
     '--with-blocks',
     '--channel=wporg',
+    '--php',
+    '8.4',
   ]);
 
   assert.equal(result.code, 0, result.stderr);
   assert.equal(fs.existsSync(path.join(dest, 'includes/Controller/Blocks.php')), true);
   assert.equal(fs.existsSync(path.join(dest, 'blocks/src/example/block.json')), true);
-  assert.equal(fs.existsSync(path.join(dest, 'readme.txt')), true);
+
+  const readmeTxt = fs.readFileSync(path.join(dest, 'readme.txt'), 'utf8');
+  assert.match(readmeTxt, /^=== Acme ===$/m);
+  assert.match(readmeTxt, /^Stable tag: 0\.1\.0$/m);
+  assert.match(readmeTxt, /^Requires PHP: 8\.4$/m);
+  assert.match(readmeTxt, /^A WordPress plugin generated from the Linchpin plugin standard\.$/m);
 
   const pkg = JSON.parse(fs.readFileSync(path.join(dest, 'package.json'), 'utf8'));
   assert.equal(pkg.scripts['build:all'], 'npm run build && npm run build --prefix blocks');
@@ -153,7 +166,7 @@ test('with-blocks and wporg overlays', () => {
   assert.doesNotMatch(main, /Update URI:/);
 });
 
-test('self-hosted adds Update URI and does not add readme.txt', () => {
+test('self-hosted adds Update URI and keeps the private readme.txt', () => {
   const dest = path.join(tempDir(), 'acme');
   const result = runCli(process.cwd(), [
     'plugin',
@@ -169,7 +182,10 @@ test('self-hosted adds Update URI and does not add readme.txt', () => {
   assert.equal(result.code, 0, result.stderr);
   const main = fs.readFileSync(path.join(dest, 'acme.php'), 'utf8');
   assert.match(main, /Update URI:\s+https:\/\/api\.linchpin\.com\/updates\/acme/);
-  assert.equal(fs.existsSync(path.join(dest, 'readme.txt')), false);
+
+  const readmeTxt = fs.readFileSync(path.join(dest, 'readme.txt'), 'utf8');
+  assert.match(readmeTxt, /^=== Acme ===$/m);
+  assert.doesNotMatch(readmeTxt, /Stable tag:/);
 });
 
 test('refuses a non-empty destination without --force', () => {
