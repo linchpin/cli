@@ -253,8 +253,13 @@ export function buildProgram(
         output,
         manifest,
       });
+      // A non-zero return is a verdict, not a failure: the handler has already
+      // rendered its result (an audit with gaps, a check that found drift), so
+      // carry the exit code and nothing else. An empty message is the signal
+      // the entry point reads as "already reported" — rendering again would
+      // put a second envelope on a JSON stream.
       if (typeof code === 'number' && code !== 0) {
-        throw new CommandError(`'${definition.meta.name}' exited with code ${code}`, code);
+        throw new CommandError('', code);
       }
     });
   }

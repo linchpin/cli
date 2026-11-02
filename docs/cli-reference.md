@@ -34,6 +34,9 @@ three in several ways this page calls out.
 | `wt` | Worktrees, and the WordPress symlink swap | `destructive` | Worktrees |
 | `shell-init` | Emit the shell wrapper, and optionally the startup notice | `read` | Utilities |
 | `version` | Report the installed version and update state | `read` | Utilities |
+| `plugin scaffold` | Generate a Linchpin WordPress plugin from the house standard | `write` | WordPress environments |
+| `hosting ls` | List a client's hosting environments as api.linchpin.com knows them | `read` | WordPress environments |
+| `hosting audit` | Report the gaps between a client's hosting and the expected layout | `read` | WordPress environments |
 | `update` | Install the latest published version | `write` | Utilities |
 
 `effect` is a required field on every command definition, and
@@ -385,6 +388,25 @@ five-question wizard; otherwise it writes a default file non-interactively.
 | `--no-interactive` | Skip the wizard even with a TTY attached |
 
 Everything the file can hold is documented in [Configuration](configuration.md).
+
+## `hosting`
+
+Two reads over api.linchpin.com's environment register, joined to Pressable's own view of each
+install. Both take an optional `[client]` — a case-insensitive substring of the client's name,
+or its id — and `--unregistered` to include Pressable installs no client environment names.
+`ls` also takes `--fields <a,b,…>` (client, role, hostname, host, ref, type, wp, deploy),
+`--brief` (client, role, hostname) and `--limit <n>`.
+Credentials come from `LINCHPIN_API_CLIENT_ID` / `LINCHPIN_API_CLIENT_SECRET` or
+`LINCHPIN_API_TOKEN`; `LINCHPIN_API_URL` points at a stub. [Hosting environments](hosting.md)
+has the data model, the finding codes and what is still unbuilt.
+
+| Command | Effect | Exit |
+| --- | --- | --- |
+| `hosting ls [client]` | `read` | 0; 4 without a credential; 3 when the api or Pressable cannot be reached |
+| `hosting audit [client]` | `read` | 0 when there are no gaps; **3 when there are**; 4 and 3 as above |
+
+`hosting audit` exits 3 having already rendered its result, so under `--json` stdout carries
+exactly one envelope with `data.clients[].findings[]` and `data.totals`, and nothing else.
 
 ## `shell-init`
 
