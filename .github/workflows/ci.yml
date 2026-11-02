@@ -70,17 +70,20 @@ jobs:
       #   80% — 2026-08-06, command registry (LINCHPIN-5367, local — inflated)
       #   84% — 2026-08-06, dual-mode contract (LINCHPIN-5368): --json, --quiet,
       #         --no-color, documented exit codes. First CI-measured figure.
+      #   86% — 2026-11-02, hosting ls/audit (LINCHPIN-6003): the first registry
+      #         list command, with --fields, --brief and --limit (TE-6, TE-8),
+      #         and env-var auth for api.linchpin.com (FS-4). CI measured 86.4%.
       #
-      # Outstanding: completions and schema (SD-3/SD-4, LINCHPIN-5375), env-var
-      # auth (FS-4, arrives with `task` in LINCHPIN-5379), skill/context files
-      # (SD-5, arrives with the bundled skills in LINCHPIN-5381), timeout
-      # (PV-1, unowned).
+      # Outstanding: completions and schema (SD-3/SD-4, LINCHPIN-5375),
+      # skill/context files (SD-5, arrives with the bundled skills in
+      # LINCHPIN-5381), timeout (PV-1, unowned), and TE-5, which still warns
+      # on `hosting ls` despite --limit (unowned).
       #
       # SD-1 stays a warning deliberately — it wants JSON on stderr by default,
       # but this CLI is human-readable by default and structured on request,
       # matching gh and wrangler. Degrading human output to score a point is not
       # a trade we are making.
-      CLI_AGENT_LINT_MIN_SCORE: '84'
+      CLI_AGENT_LINT_MIN_SCORE: '86'
     steps:
       - name: Checkout
         uses: actions/checkout@v7
