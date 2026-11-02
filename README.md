@@ -63,7 +63,7 @@ is a TTY, which is exactly the combination that makes a naive wizard hang foreve
 
 Deeper background lives in [`docs/`](docs/README.md): [worktrees and the symlink
 swap](docs/worktrees.md), [configuration](docs/configuration.md), [hooks](docs/hooks.md),
-and [agent integration](docs/agent-integration.md).
+[agent integration](docs/agent-integration.md), and [hosting environments](docs/hosting.md).
 
 ## Command surface
 
@@ -83,6 +83,8 @@ linchpin <command> --help       # flags, examples and description for one
 | `wt copy <path>` / `wt link <path>` | Copy or symlink a file from the base worktree into this one | write |
 | `wt config init` / `wt config show` | Create or inspect `.linchpin.json` | write / read |
 | `wt invoke <hook>` | Run a lifecycle hook by hand | write |
+| `hosting ls [client]` | List a client's hosting environments as api.linchpin.com knows them, joined to Pressable's site type and `WP_ENVIRONMENT_TYPE` | read |
+| `hosting audit [client]` | Report the gaps against the expected production / staging / development layout; exit 3 when there are any | read |
 | `shell-init` | Emit the shell wrapper that lets `wt switch` change your directory, and with `--notify` the shell-startup update notice | read |
 | `version` | Print the installed version and whether a newer one is published | read |
 | `update` | Install the latest published version | write |
@@ -356,6 +358,8 @@ linchpin update --check || echo "CLI is behind — releasing with an old toolcha
 | `LINCHPIN_REGISTRY` | Registry to check, for a mirror or an air-gapped network. Falls back to `npm_config_registry`, then npmjs.org |
 | `LINCHPIN_CACHE_DIR` | Where the update-check cache and the pre-rendered startup notice live. Defaults to `$XDG_CACHE_HOME/linchpin`, then `~/.cache/linchpin`. Set at runtime it also overrides the path baked into the `shell-init --notify` block |
 | `LINCHPIN_OUTPUT` | `json`, `quiet`, `human` — set the output mode once instead of per call |
+| `LINCHPIN_API_CLIENT_ID` / `LINCHPIN_API_CLIENT_SECRET` | An api.linchpin.com application client with `sites:read`, for `hosting`. `LINCHPIN_API_TOKEN` is the static-token form |
+| `LINCHPIN_API_URL` | Override the api for a local stub. Plaintext is refused off loopback unless `LINCHPIN_API_ALLOW_INSECURE=1` |
 | `NO_COLOR` / `FORCE_COLOR` | Standard colour control |
 
 ## Uninstall

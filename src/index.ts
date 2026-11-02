@@ -165,6 +165,44 @@ export {
   type ScaffoldResult,
 } from './core/plugin-scaffold.js';
 
+export {
+  API_TIMEOUT_MS,
+  API_URL,
+  LinchpinApi,
+  requireCredentials,
+  resolveApiBase,
+  resolveCredentials,
+  type ApiCredentials,
+  type ApiEnvironment,
+  type PressableInstall,
+  type PressableInstalls,
+  type Role,
+} from './core/linchpin-api.js';
+
+export {
+  DEFAULT_POLICY,
+  HOST_POLICIES,
+  ROLE_ORDER,
+  auditInventory,
+  buildInventory,
+  clientMatches,
+  expectedRolesFor,
+  policyFor,
+  renderTable,
+  siteTypeOf,
+  type AuditReport,
+  type ClientAudit,
+  type ClientInventory,
+  type Finding,
+  type FindingCode,
+  type Inventory,
+  type InventoryRow,
+  type LayoutPolicy,
+  type ProductionGroup,
+  type Severity,
+  type SiteType,
+} from './core/hosting.js';
+
 export { readManifest, readVersion, type Manifest } from './version.js';
 
 export {

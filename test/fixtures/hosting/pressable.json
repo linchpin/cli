@@ -1,0 +1,13 @@
+{
+  "ok": true,
+  "domains_readable": false,
+  "installs": [
+    { "id": "1335128", "name": "linchpin", "url": "linchpin.com", "state": "live", "staging": false, "sandbox": false, "wp_environment_type": "production", "multisite": true, "cloned_from_id": "", "environment_id": 1 },
+    { "id": "1833215", "name": "linchpindev", "url": "linchpindev.linchpin.build", "state": "live", "staging": true, "sandbox": false, "wp_environment_type": "development", "multisite": true, "cloned_from_id": "1335128", "environment_id": 2 },
+    { "id": "1769760", "name": "ideainfanttoddler", "url": "ideainfanttoddler.linchpin.site", "state": "live", "staging": false, "sandbox": false, "wp_environment_type": "production", "multisite": false, "cloned_from_id": "", "environment_id": 3 },
+    { "id": "1848725", "name": "itcastg", "url": "itcastg.linchpin.build", "state": "live", "staging": true, "sandbox": false, "wp_environment_type": "staging", "multisite": false, "cloned_from_id": "1769760", "environment_id": 4 },
+    { "id": "1848726", "name": "itcadev", "url": "itcadev.linchpin.build", "state": "live", "staging": true, "sandbox": true, "wp_environment_type": "production", "multisite": false, "cloned_from_id": "1769760", "environment_id": 5 },
+    { "id": "900001", "name": "acmestg", "url": "acmestg.linchpin.build", "state": "live", "staging": true, "sandbox": false, "wp_environment_type": "staging", "multisite": false, "cloned_from_id": "", "environment_id": 6 },
+    { "id": "1743803", "name": "linchpin-legacy", "url": "linchpin-legacy.mystagingwebsite.com", "state": "live", "staging": false, "sandbox": false, "wp_environment_type": "production", "multisite": false, "cloned_from_id": "", "environment_id": null }
+  ]
+}

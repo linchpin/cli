@@ -1,0 +1,47 @@
+{
+  "ok": true,
+  "environments": [
+    {
+      "id": 1, "client_id": 10, "client_name": "Linchpin", "role": "production", "label": "linchpin.com",
+      "hostname": "linchpin.com", "provider": "pressable", "provider_ref": "1335128",
+      "github_repo": "linchpin/linchpin.com", "deploy_environment": "production", "deploy_branch": "main",
+      "multisite": true, "production_environment_id": null, "site_ids": [100], "latest_deploy": null, "maintenance": null
+    },
+    {
+      "id": 2, "client_id": 10, "client_name": "Linchpin", "role": "development", "label": "linchpindev",
+      "hostname": "linchpindev.linchpin.build", "provider": "pressable", "provider_ref": "1833215",
+      "github_repo": "linchpin/linchpin.com", "deploy_environment": "development", "deploy_branch": "maintenance",
+      "multisite": true, "production_environment_id": 1, "site_ids": [101], "latest_deploy": null, "maintenance": null
+    },
+    {
+      "id": 3, "client_id": 20, "client_name": "ITCA", "role": "production", "label": "ITCA",
+      "hostname": "ideainfanttoddler.linchpin.site", "provider": "pressable", "provider_ref": "1769760",
+      "github_repo": "linchpin/ideainfanttoddler", "deploy_environment": "production", "deploy_branch": "main",
+      "multisite": false, "production_environment_id": null, "site_ids": [200], "latest_deploy": null, "maintenance": null
+    },
+    {
+      "id": 4, "client_id": 20, "client_name": "ITCA", "role": "staging", "label": "ITCA staging",
+      "hostname": "itcastg.linchpin.build", "provider": "pressable", "provider_ref": "1848725",
+      "github_repo": "linchpin/ideainfanttoddler", "deploy_environment": "staging", "deploy_branch": "staging",
+      "multisite": false, "production_environment_id": 3, "site_ids": [201], "latest_deploy": null, "maintenance": null
+    },
+    {
+      "id": 5, "client_id": 20, "client_name": "ITCA", "role": "development", "label": "ITCA dev",
+      "hostname": "itcadev.linchpin.build", "provider": "pressable", "provider_ref": "1848726",
+      "github_repo": "linchpin/ideainfanttoddler", "deploy_environment": "development", "deploy_branch": "maintenance",
+      "multisite": false, "production_environment_id": 3, "site_ids": [202], "latest_deploy": null, "maintenance": null
+    },
+    {
+      "id": 6, "client_id": 30, "client_name": "Acme", "role": "staging", "label": "Acme staging",
+      "hostname": "acmestg.linchpin.build", "provider": "pressable", "provider_ref": "900001",
+      "github_repo": "", "deploy_environment": "", "deploy_branch": "",
+      "multisite": false, "production_environment_id": null, "site_ids": [], "latest_deploy": null, "maintenance": null
+    },
+    {
+      "id": 7, "client_id": 40, "client_name": "Wheaton", "role": "production", "label": "Wheaton",
+      "hostname": "wheaton.example", "provider": "wpengine", "provider_ref": "wheatonprod",
+      "github_repo": "", "deploy_environment": "production", "deploy_branch": "main",
+      "multisite": false, "production_environment_id": null, "site_ids": [400], "latest_deploy": null, "maintenance": null
+    }
+  ]
+}
