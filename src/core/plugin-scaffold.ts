@@ -332,6 +332,20 @@ function applyDisplayIdentity(
   readme = readme.replace(/^(# .+\n\n).+(\n)/, `$1${description}$2`);
   writeFileSync(readmePath, readme);
 
+  // Plugin Check fails a readme.txt whose Requires PHP differs from the header,
+  // and warns on a mismatched plugin name. The short description follows the
+  // header block, and is absent when the next line is already a section.
+  const readmeTxtPath = join(dest, 'readme.txt');
+  if (existsSync(readmeTxtPath)) {
+    let readmeTxt = readFileSync(readmeTxtPath, 'utf8');
+    readmeTxt = readmeTxt.replace(/^=== .+ ===$/m, `=== ${name} ===`);
+    readmeTxt = readmeTxt.replace(/^(=== .+ ===\n(?:.+\n)*\n)(?!==).+(\n)/, `$1${description}$2`);
+    if (php !== '8.3') {
+      readmeTxt = readmeTxt.replace(/(Requires PHP:\s*)8\.3/, (_match, label: string) => `${label}${php}`);
+    }
+    writeFileSync(readmeTxtPath, readmeTxt);
+  }
+
   const composerPath = join(dest, 'composer.json');
   const composer = JSON.parse(readFileSync(composerPath, 'utf8')) as {
     description?: string;

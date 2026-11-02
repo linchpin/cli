@@ -20,9 +20,9 @@ linchpin plugin scaffold acme --path ~/GitHub/acme --dry-run
 
 | Flag | Default | Meaning |
 | --- | --- | --- |
-| `--name` | title-cased slug | Plugin Name and README title |
-| `--description` | generated one-liner | Plugin header and README one-liner |
-| `--php` | `8.3` | Requires PHP |
+| `--name` | title-cased slug | Plugin Name, README title, and the `readme.txt` name |
+| `--description` | generated one-liner | Plugin header, README one-liner, and the `readme.txt` short description |
+| `--php` | `8.3` | Requires PHP, in the header and in `readme.txt` when it declares one |
 | `--channel` | `private` | `private`, `wporg`, or `self-hosted` |
 | `--with-blocks` | off | Nested `blocks/` workspace and an example block |
 | `--path` | `./<slug>` | Destination |
