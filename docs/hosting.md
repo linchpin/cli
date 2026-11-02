@@ -8,6 +8,9 @@ and a development environment, each registered with the role it plays.
 linchpin hosting ls [client]              # one row per environment, production first
 linchpin hosting audit [client]           # the gaps, with a remedy each; exit 3 when there are any
 linchpin hosting ls --unregistered        # also the Pressable installs no client owns
+linchpin hosting ls --brief               # client, role, hostname — nothing else
+linchpin hosting ls --fields role,wp,ref  # pick columns; the same keys in --json
+linchpin hosting ls --limit 20            # cap the rows; --json reports total and truncated
 ```
 
 Both are classified `read`. The layout itself, what each role means on each host, and how to
@@ -74,7 +77,10 @@ Linchpin
 ```
 
 `--json` carries the same findings in the envelope: `data.clients[].findings[]` and
-`data.totals`.
+`data.totals`. `hosting ls --json` is flat — `data.environments[]`, one object per row with
+`environmentId`, `clientId` and whichever columns `--fields` kept — plus `data.total` and
+`data.truncated`, so an agent can page with `--limit` and project with `--fields` instead
+of reading the whole fleet into its context.
 
 ## Not built yet: closing a gap from the CLI
 

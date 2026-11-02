@@ -189,16 +189,64 @@ test('hosting ls filters by client name or id and can include unregistered insta
     assert.equal(byName.code, 0, byName.stderr);
     const envelope = JSON.parse(byName.stdout);
     assert.equal(envelope.command, 'hosting_ls');
-    assert.deepEqual(envelope.data.clients.map((client) => client.clientName), ['ITCA']);
-    assert.deepEqual(envelope.data.unregistered, []);
+    assert.deepEqual(
+      envelope.data.environments.map((row) => [row.client, row.role, row.hostname]),
+      [
+        ['ITCA', 'production', 'ideainfanttoddler.linchpin.site'],
+        ['ITCA', 'staging', 'itcastg.linchpin.build'],
+        ['ITCA', 'development', 'itcadev.linchpin.build'],
+      ]
+    );
+    assert.equal(envelope.data.total, 3);
+    assert.equal(envelope.data.truncated, false);
 
     const byId = await run(['hosting', 'ls', '10', '--unregistered', '--json'], { LINCHPIN_API_URL: api.url, LINCHPIN_API_TOKEN: 'agent-token' });
     const data = JSON.parse(byId.stdout).data;
-    assert.deepEqual(data.clients.map((client) => client.clientName), ['Linchpin']);
-    assert.deepEqual(data.unregistered.map((install) => install.name), ['linchpin-legacy']);
+    assert.deepEqual(
+      data.environments.map((row) => [row.client, row.ref]),
+      [['Linchpin', '1335128'], ['Linchpin', '1833215'], ['', '1743803']]
+    );
 
     const human = await run(['hosting', 'ls', '--unregistered'], { LINCHPIN_API_URL: api.url, LINCHPIN_API_TOKEN: 'agent-token' });
     assert.match(human.stdout, /\(unregistered\)\s+—\s+linchpin-legacy\.mystagingwebsite\.com\s+pressable\s+1743803\s+live\s+production/);
+  } finally {
+    await api.close();
+  }
+});
+
+test('hosting ls trims its output with --fields, --brief and --limit', async () => {
+  const api = await startApi();
+  try {
+    const env = { LINCHPIN_API_URL: api.url, LINCHPIN_API_TOKEN: 'agent-token' };
+
+    const brief = await run(['hosting', 'ls', 'itca', '--brief'], env);
+    assert.equal(brief.code, 0, brief.stderr);
+    assert.deepEqual(brief.stdout.split('\n'), [
+      'Client  Role         Hostname',
+      'ITCA    production   ideainfanttoddler.linchpin.site',
+      '        staging      itcastg.linchpin.build',
+      '        development  itcadev.linchpin.build',
+    ]);
+
+    const fields = await run(['hosting', 'ls', 'itca', '--fields', 'role,wp', '--json'], env);
+    const rows = JSON.parse(fields.stdout).data.environments;
+    assert.deepEqual(Object.keys(rows[0]), ['environmentId', 'clientId', 'role', 'wp']);
+    assert.deepEqual(rows.map((row) => row.wp), ['production', 'staging', 'production']);
+
+    const limited = await run(['hosting', 'ls', '--limit', '2', '--json'], env);
+    const data = JSON.parse(limited.stdout).data;
+    assert.equal(data.environments.length, 2);
+    assert.equal(data.total, 7);
+    assert.equal(data.truncated, true);
+    const human = await run(['hosting', 'ls', '--limit', '2'], env);
+    assert.match(human.stdout, /\n\n2 of 7 rows \(--limit\)$/);
+
+    const bad = await run(['hosting', 'ls', '--fields', 'role,colour', '--json'], env);
+    assert.equal(bad.code, lib.EXIT_CODES.validation);
+    const error = JSON.parse(bad.stdout).error;
+    assert.equal(error.code, 'invalid_fields');
+    assert.match(error.message, /colour/);
+    assert.match(error.remedy, /client, role, hostname/);
   } finally {
     await api.close();
   }

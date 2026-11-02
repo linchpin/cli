@@ -394,6 +394,8 @@ Everything the file can hold is documented in [Configuration](configuration.md).
 Two reads over api.linchpin.com's environment register, joined to Pressable's own view of each
 install. Both take an optional `[client]` — a case-insensitive substring of the client's name,
 or its id — and `--unregistered` to include Pressable installs no client environment names.
+`ls` also takes `--fields <a,b,…>` (client, role, hostname, host, ref, type, wp, deploy),
+`--brief` (client, role, hostname) and `--limit <n>`.
 Credentials come from `LINCHPIN_API_CLIENT_ID` / `LINCHPIN_API_CLIENT_SECRET` or
 `LINCHPIN_API_TOKEN`; `LINCHPIN_API_URL` points at a stub. [Hosting environments](hosting.md)
 has the data model, the finding codes and what is still unbuilt.

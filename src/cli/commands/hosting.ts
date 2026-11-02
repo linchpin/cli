@@ -12,7 +12,7 @@ import {
   type InventoryRow,
 } from '../../core/hosting.js';
 import { LinchpinApi, type PressableInstall } from '../../core/linchpin-api.js';
-import { EXIT_CODES } from '../errors.js';
+import { EXIT_CODES, UserError } from '../errors.js';
 import { defineCommand } from '../registry.js';
 
 /**
@@ -32,59 +32,142 @@ async function loadInventory(): Promise<Inventory> {
   return buildInventory(environments, pressable.installs);
 }
 
-function describeRow(row: InventoryRow): readonly string[] {
+/** The columns `hosting ls` can show, in table order. `--fields` picks from these. */
+export const LS_FIELDS = [
+  'client',
+  'role',
+  'hostname',
+  'host',
+  'ref',
+  'type',
+  'wp',
+  'deploy',
+] as const;
+export type LsField = (typeof LS_FIELDS)[number];
+
+const FIELD_HEADERS: Record<LsField, string> = {
+  client: 'Client',
+  role: 'Role',
+  hostname: 'Hostname',
+  host: 'Host',
+  ref: 'Ref',
+  type: 'Site type',
+  wp: 'WP type',
+  deploy: 'Deploy',
+};
+
+/** `--brief`: the three columns that identify an environment and nothing else. */
+const BRIEF_FIELDS: readonly LsField[] = ['client', 'role', 'hostname'];
+
+/** One environment, flattened to the columns the table and the JSON share. */
+export interface LsRow {
+  readonly environmentId: number | null;
+  readonly clientId: number | null;
+  readonly client: string;
+  readonly role: string;
+  readonly hostname: string;
+  readonly host: string;
+  readonly ref: string;
+  readonly type: string;
+  readonly wp: string;
+  readonly deploy: string;
+}
+
+function rowFor(client: string, clientId: number, row: InventoryRow): LsRow {
   const { environment, install, siteType } = row;
-  return [
-    environment.role,
-    environment.hostname || environment.label || '—',
-    environment.provider || '—',
-    environment.provider_ref || '—',
-    install ? siteType : '—',
-    install ? install.wp_environment_type || 'unset' : '—',
-    environment.deploy_branch
+  return {
+    environmentId: environment.id,
+    clientId,
+    client,
+    role: environment.role,
+    hostname: environment.hostname || environment.label,
+    host: environment.provider,
+    ref: environment.provider_ref,
+    type: install ? siteType : '',
+    wp: install ? install.wp_environment_type : '',
+    deploy: environment.deploy_branch
       ? `${environment.deploy_environment || '?'}@${environment.deploy_branch}`
-      : environment.deploy_environment || '—',
-  ];
+      : environment.deploy_environment,
+  };
 }
 
-function describeInstall(install: PressableInstall): readonly string[] {
-  return [
-    '—',
-    install.url || install.name,
-    'pressable',
-    install.id,
-    install.sandbox ? 'sandbox' : install.staging ? 'staging' : 'live',
-    install.wp_environment_type || 'unset',
-    '—',
-  ];
+function rowForInstall(install: PressableInstall): LsRow {
+  return {
+    environmentId: null,
+    clientId: null,
+    client: '',
+    role: '',
+    hostname: install.url || install.name,
+    host: 'pressable',
+    ref: install.id,
+    type: install.sandbox ? 'sandbox' : install.staging ? 'staging' : 'live',
+    wp: install.wp_environment_type,
+    deploy: '',
+  };
 }
 
-const HEADER = ['Client', 'Role', 'Hostname', 'Host', 'Ref', 'Site type', 'WP type', 'Deploy'];
-
-function renderInventory(inventory: Inventory, includeUnregistered: boolean): string {
-  const rows: string[][] = [];
-
+/** Every environment as a flat row, production first within each client. */
+function flattenInventory(inventory: Inventory): LsRow[] {
+  const rows: LsRow[] = [];
   for (const client of inventory.clients) {
-    let first = true;
     for (const group of client.groups) {
       for (const row of [group.production, ...group.copies]) {
-        if (!row) continue;
-        rows.push([first ? client.clientName : '', ...describeRow(row)]);
-        first = false;
+        if (row) rows.push(rowFor(client.clientName, client.clientId, row));
       }
     }
   }
+  return rows;
+}
 
-  if (includeUnregistered) {
-    let first = true;
-    for (const install of inventory.unregistered) {
-      rows.push([first ? '(unregistered)' : '', ...describeInstall(install)]);
-      first = false;
-    }
+/** Parse `--fields a,b,c`, rejecting a name that is not a column. */
+export function parseFields(value: string | undefined, brief: boolean): readonly LsField[] {
+  if (value === undefined) return brief ? BRIEF_FIELDS : LS_FIELDS;
+
+  const wanted = value
+    .split(',')
+    .map((field) => field.trim().toLowerCase())
+    .filter((field) => field !== '');
+  const unknown = wanted.filter((field) => !(LS_FIELDS as readonly string[]).includes(field));
+
+  if (wanted.length === 0 || unknown.length > 0) {
+    throw new UserError(
+      unknown.length > 0
+        ? `Unknown field(s) for --fields: ${unknown.join(', ')}`
+        : '--fields needs at least one column',
+      {
+        exitCode: EXIT_CODES.validation,
+        code: 'invalid_fields',
+        remedy: `Choose from: ${LS_FIELDS.join(', ')}`,
+      }
+    );
   }
 
+  return wanted as LsField[];
+}
+
+function renderRows(rows: readonly LsRow[], fields: readonly LsField[]): string {
   if (rows.length === 0) return 'No environments.';
-  return renderTable(HEADER, rows);
+
+  // The client name is printed once per run of rows, as a table reads better
+  // that way; the JSON keeps it on every row, as a filter needs it there.
+  let previousClient: string | null = null;
+  const cells = rows.map((row) => {
+    const repeat = row.client === previousClient;
+    previousClient = row.client;
+    return fields.map((field) => {
+      const value = row[field];
+      if (field === 'client') {
+        if (repeat) return '';
+        return value === '' ? '(unregistered)' : value;
+      }
+      return value === '' ? '—' : value;
+    });
+  });
+
+  return renderTable(
+    fields.map((field) => FIELD_HEADERS[field]),
+    cells
+  );
 }
 
 const MARK: Record<Finding['severity'], string> = { gap: '✗', warning: '⚠', info: '·' };
@@ -174,34 +257,66 @@ export const hostingLsCommand = defineCommand({
     name: 'hosting ls',
     summary: "List a client's hosting environments as api.linchpin.com knows them",
     description:
-      'Reads the environment registry and, for Pressable, the host\'s own view of each\n' +
+      "Reads the environment registry and, for Pressable, the host's own view of each\n" +
       'install: site type (live, staging, sandbox) and WP_ENVIRONMENT_TYPE. One row per\n' +
-      'environment, grouped by client, production first.\n\n' +
+      'environment, grouped by client, production first. --fields picks columns, --brief\n' +
+      'keeps client, role and hostname, --limit caps the rows.\n\n' +
       'Needs LINCHPIN_API_CLIENT_ID and LINCHPIN_API_CLIENT_SECRET (an application client\n' +
       'with sites:read), or LINCHPIN_API_TOKEN.',
     group: 'wordpress',
     examples: [
       'linchpin hosting ls',
       'linchpin hosting ls itca',
-      'linchpin hosting ls --unregistered',
-      'linchpin hosting ls linchpin --json',
+      'linchpin hosting ls --brief',
+      'linchpin hosting ls --fields client,role,hostname,wp --json',
+      'linchpin hosting ls --unregistered --limit 20',
     ],
   },
   effect: 'read',
   args: z.object({
     client: clientArg,
     unregistered: unregisteredArg,
+    fields: z
+      .string()
+      .optional()
+      .describe(`Comma-separated columns to show: ${LS_FIELDS.join(', ')}`),
+    brief: z
+      .boolean()
+      .default(false)
+      .describe('Only client, role and hostname — the shortest output that still identifies each environment'),
+    limit: z
+      .number()
+      .int()
+      .positive()
+      .optional()
+      .describe('Show at most this many rows; the JSON reports total and truncated'),
   }),
   handler: async (args, ctx) => {
+    const fields = parseFields(args.fields, args.brief);
     const inventory = filterInventory(await loadInventory(), args.client);
 
+    const all = [
+      ...flattenInventory(inventory),
+      ...(args.unregistered ? inventory.unregistered.map(rowForInstall) : []),
+    ];
+    const rows = args.limit === undefined ? all : all.slice(0, args.limit);
+    const truncated = rows.length < all.length;
+
+    const projected = rows.map((row) =>
+      Object.fromEntries([
+        ['environmentId', row.environmentId],
+        ['clientId', row.clientId],
+        ...fields.map((field) => [field, row[field]] as const),
+      ])
+    );
+
+    const human = renderRows(rows, fields);
     ctx.output.result(
       'hosting_ls',
+      { environments: projected, total: all.length, truncated },
       {
-        clients: inventory.clients,
-        unregistered: args.unregistered ? inventory.unregistered : [],
-      },
-      { human: renderInventory(inventory, args.unregistered) }
+        human: truncated ? `${human}\n\n${rows.length} of ${all.length} rows (--limit)` : human,
+      }
     );
   },
 });
