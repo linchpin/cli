@@ -106,7 +106,7 @@ jobs:
       # carries managed-path, which is what keeps a sync here from trashing
       # another repository's pages under the shared engineering-resources
       # parent — so a ref without that input must never be used.
-      - uses: linchpin/docspress@v1
+      - uses: linchpin/docspress@v2
         with:
           mode: publish
 
