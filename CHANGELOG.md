@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.3.1](https://github.com/linchpin/cli/compare/v1.3.0...v1.3.1) (2026-11-03)
+
+
+### Bug Fixes 🐛
+
+* **LINCHPIN-5636:** Rename readme.txt with the rest of a scaffolded plugin ([#96](https://github.com/linchpin/cli/issues/96)) ([30e8cef](https://github.com/linchpin/cli/commit/30e8cef6efcf3d88782287bc07651c90c5ec53f9))
+
+
+### Miscellaneous Chores 🧹
+
+* **deps:** bump fast-uri from 3.1.8 to 3.1.9 ([#99](https://github.com/linchpin/cli/issues/99)) ([100ae26](https://github.com/linchpin/cli/commit/100ae26ee12b8e7ed76518060bc2f9d8ef8b0c72))
+* **deps:** update commitlint monorepo to v21.2.4 ([#97](https://github.com/linchpin/cli/issues/97)) ([4ba91d2](https://github.com/linchpin/cli/commit/4ba91d2f848eb9ee2a75a75e5f63d5222b53f693))
+* **deps:** update dependency @inquirer/prompts to v8.7.5 ([#92](https://github.com/linchpin/cli/issues/92)) ([253e452](https://github.com/linchpin/cli/commit/253e452c8416b81fcaa820e2d483178243ae5e0f))
+* **deps:** update dependency @types/node to v24.19.2 ([#89](https://github.com/linchpin/cli/issues/89)) ([b208fb9](https://github.com/linchpin/cli/commit/b208fb96d1bf8d76345ec33589abc279cef8ef5f))
+* **deps:** update dependency @vercel/detect-agent to v1.2.7 ([#93](https://github.com/linchpin/cli/issues/93)) ([2268a8f](https://github.com/linchpin/cli/commit/2268a8f87842c237510c0944413d8b03f46c9a24))
+* **deps:** update dependency std-env to v4.3.0 ([#90](https://github.com/linchpin/cli/issues/90)) ([74e6fa9](https://github.com/linchpin/cli/commit/74e6fa9edb28852b570364aba702003802eb4a74))
+* **deps:** update dependency tsdown to v0.23.4 ([#94](https://github.com/linchpin/cli/issues/94)) ([f8451cf](https://github.com/linchpin/cli/commit/f8451cf28dc6dbf55a9c61f21a6cf06c3bbdf40c))
+* **deps:** update dependency zod to v4.6.7 ([#95](https://github.com/linchpin/cli/issues/95)) ([6d059aa](https://github.com/linchpin/cli/commit/6d059aa425ff0dc398e33adc207a02888034a700))
+* **deps:** update linchpin/docspress action to v2 ([#91](https://github.com/linchpin/cli/issues/91)) ([43ac7a1](https://github.com/linchpin/cli/commit/43ac7a10587e39a255f75b6c40d5909ef0645b48))
+
 ## [1.3.0](https://github.com/linchpin/cli/compare/v1.2.3...v1.3.0) (2026-09-21)
 
 
