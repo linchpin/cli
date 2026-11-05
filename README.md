@@ -143,6 +143,13 @@ switch` repoints the symlink but leaves your shell sitting in the **old** worktr
 eval "$(linchpin shell-init --notify)"
 ```
 
+Put it **below** whatever puts `linchpin` on your `PATH` — usually a Node version manager such
+as nvm, fnm, asdf or Volta. nvm, for example, only adds its global bin directory once `nvm.sh`
+is sourced, so a `shell-init` line above that runs before `linchpin` can be found: every new
+shell prints `command not found: linchpin`, and you get neither the wrapper nor the startup
+notice. Typing `linchpin` at the prompt still works, because by then the whole profile has run —
+which is what makes this easy to miss.
+
 The shell is detected from `$SHELL`; force one with `linchpin shell-init --shell fish`. If you
 would rather not add anything to your profile, wrap the command instead —
 `cd "$(linchpin wt switch feature/x)"` — which works because path output goes to stdout while
@@ -501,6 +508,9 @@ the safety net. More on why this shapes the whole design:
 | Symptom | Fix |
 | --- | --- |
 | `command not found: linchpin` | The global bin dir is not on `PATH`. Add `$(npm prefix -g)/bin` |
+| `~/.zshrc:NN: command not found: linchpin` when a terminal opens | The `shell-init` line runs before your Node version manager puts `linchpin` on `PATH`. Move it below the nvm, fnm or asdf block |
+| `command not found: linchpin` after switching Node with nvm | nvm keeps global packages per Node version. `npm install -g @linchpinagency/cli` again, or install the next Node with `nvm install <version> --reinstall-packages-from=current` |
+| No update notice when a terminal opens | The profile has a bare `linchpin shell-init`. Add `--notify` |
 | `Missing .linchpin.json` | Run `linchpin wt config init` in the **base** worktree, not a worktree |
 | `Environment '<name>' is not configured` | Add the key under `wordpress.environments`, or pass `--env` with one that exists |
 | `Target exists and is not a symlink` | A real directory is in the plugin slot. Back it up, or pass `--force` if replacing it is intended |
