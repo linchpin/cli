@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.3.2](https://github.com/linchpin/cli/compare/v1.3.1...v1.3.2) (2026-11-05)
+
+
+### Documentation 📚
+
+* **LINCHPIN-6043:** Say the shell-init line must follow the Node version manager ([#103](https://github.com/linchpin/cli/issues/103)) ([747fc29](https://github.com/linchpin/cli/commit/747fc29a82f613f40a8c2249192056a5adcab059))
+
+
+### Miscellaneous Chores 🧹
+
+* **deps:** update dependency tsdown to v0.23.5 ([#102](https://github.com/linchpin/cli/issues/102)) ([6cf6b66](https://github.com/linchpin/cli/commit/6cf6b66e94fa8e09c8af407ab1dbd336eb453b27))
+
 ## [1.3.1](https://github.com/linchpin/cli/compare/v1.3.0...v1.3.1) (2026-11-03)
 
 
