@@ -105,6 +105,15 @@ successful `wt switch`, because a child process cannot change its parent shell's
 `cd "$(linchpin wt switch …)"`. `--notify` adds the [shell-startup
 notice](#the-shell-startup-notice).
 
+The line must come **after** whatever puts `linchpin` on your `PATH`, which is usually a Node
+version manager — nvm, fnm, asdf or Volta. nvm only adds its global bin directory once `nvm.sh`
+is sourced, so a `shell-init` line above that runs before `linchpin` can be found: every new
+shell prints `command not found: linchpin`, and neither the wrapper nor the startup notice is
+installed. Typing `linchpin` at the prompt still works, because by then the whole profile has
+run, which is what makes this easy to miss. nvm, fnm and asdf also keep global packages per
+Node version, so installing a new Node leaves the CLI behind until you install it again — with
+nvm, `nvm install <version> --reinstall-packages-from=current` carries it across.
+
 ## Two ways to ask about the version
 
 | Command | Answers | Exit code |
